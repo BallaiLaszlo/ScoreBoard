@@ -1,0 +1,45 @@
+{
+    "api_key": "xxxx",
+    "leagues": [
+        {
+            "name": "NB I",
+            "id": 187
+        },
+        {
+            "name": "La Liga",
+            "id": 8
+        },
+        {
+            "name": "Premier League",
+            "id": 17
+        },
+        {
+            "name": "Bundesliga",
+            "id": 35
+        },
+        {
+            "name": "Serie A",
+            "id": 23
+        },
+        {
+            "name": "Ligue 1",
+            "id": 34
+        },
+        {
+            "name": "Champions League",
+            "id": 7
+        },
+        {
+            "name": "Europa League",
+            "id": 679
+        },
+        {
+            "name": "Coppa Italia",
+            "id": 328
+        },
+        {
+            "name": "FIFA Club World Cup",
+            "id": 16
+        }
+    ]
+}
