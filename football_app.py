@@ -3,53 +3,63 @@ from tkinter import font
 from PIL import Image, ImageTk
 import io
 from ttkthemes import ThemedTk
-from api_utils import fetch_league_info, get_league_names, get_league_id, fetch_league_image, fetch_standings, \
-    print_standings, get_first_season_id
+from api_utils import fetch_league_info, get_league_names, get_league_id, fetch_league_image, fetch_standings, print_standings, get_first_season_id
 
 
-# Function to update league information when a league is selected
-# Function to update league information when a league is selected
-# Function to update league information when a league is selected
-# Function to update league information when a league is selected
-# Function to update league information when a league is selected
 def update_league_info(event):
+    """
+    Updates league information when a league is selected.
+
+    Args:
+        event: The event triggered by selecting a league from the combobox.
+    """
     league_name = league_combobox.get()
     league_id = get_league_id(league_name)
 
     if league_id:
-        league_info = fetch_league_info(league_id)  # Get league info
+        league_info = fetch_league_info(league_id)
 
         if league_info:
             display_league_info(league_info)
             display_league_icon(league_id)
 
-            # Get the first season ID directly from settings.json
             season_id = get_first_season_id(league_name)
-            if season_id:  # Check if a valid season ID is retrieved
+            if season_id:
                 standings = fetch_standings(league_id, season_id)
                 if standings:
-                    display_standings(standings)  # Display standings in the GUI
-                    print_standings(standings)  # Print standings to console
+                    display_standings(standings)
+                    print_standings(standings)
                 else:
                     print("No standings data returned for the selected league.")
             else:
                 print("No valid season ID found for the selected league.")
 
 
-# Function to display the fetched league information
 def display_league_info(league_info):
+    """
+    Displays the fetched league information.
+
+    Args:
+        league_info (dict): The league information dictionary.
+    """
     if league_info and 'uniqueTournament' in league_info:
         league_name = league_info['uniqueTournament'].get('name', 'N/A')
         league_id = league_info['uniqueTournament'].get('id', 'N/A')
         most_titles_team = league_info['uniqueTournament'].get('mostTitlesTeams', [{}])[0].get('name', 'N/A')
         title_holder = league_info['uniqueTournament'].get('titleHolder', {}).get('name', 'N/A')
 
-        info_text = f"League: {league_name}\nID: {league_id}\nCurrent Title Holder: {title_holder}\nMost Titles Team: {most_titles_team}"
+        info_text = (f"League: {league_name}\nID: {league_id}\nCurrent Title Holder: {title_holder}\n"
+                     f"Most Titles Team: {most_titles_team}")
         league_info_label.config(text=info_text)
 
 
-# Function to display the league icon
 def display_league_icon(league_id):
+    """
+    Displays the league icon based on the league ID.
+
+    Args:
+        league_id (str): The ID of the league.
+    """
     image_data = fetch_league_image(league_id)
     if image_data:
         image = Image.open(io.BytesIO(image_data))
@@ -61,13 +71,18 @@ def display_league_icon(league_id):
         league_icon_label.config(image='')
 
 
-# Function to display standings
 def display_standings(standings):
+    """
+    Displays the league standings in the GUI.
+
+    Args:
+        standings (dict): The standings information dictionary.
+    """
     matches_label.config(text="")
     if standings and 'standings' in standings:
         rows = standings['standings'][0].get('rows', [])
-
         standings_text = ""
+
         for row in rows:
             team = row['team']['name']
             position = row['position']

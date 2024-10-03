@@ -14,8 +14,16 @@ leagues = settings["leagues"]
 # Create a dictionary for league ID lookup
 league_id_lookup = {league['name']: league['id'] for league in leagues}
 
-# General request handler
 def make_api_request(url):
+    """
+    General request handler to make API calls.
+
+    Args:
+        url (str): The URL to send the request to.
+
+    Returns:
+        dict or bytes: The JSON response data if available, otherwise raw content.
+    """
     headers = {
         'x-rapidapi-key': api_key,
         'x-rapidapi-host': api_host
@@ -38,62 +46,76 @@ def make_api_request(url):
     else:
         return response.content  # Return raw content for non-JSON data
 
-# Fetch league information
-# Fetch league information and retrieve the season IDs
-# Fetch league information (no need to fetch seasons from API)
 def fetch_league_info(league_id):
-    url = f"https://{api_host}/api/tournament/{league_id}"
-    league_info = make_api_request(url)
-    return league_info  # Only return league info
+    """
+    Fetches league information based on league ID.
 
-# Fetch first season ID from settings
+    Args:
+        league_id (str): The ID of the league.
+
+    Returns:
+        dict: The league information.
+    """
+    url = f"https://{api_host}/api/tournament/{league_id}"
+    return make_api_request(url)
+
 def get_first_season_id(league_name):
+    """
+    Retrieves the first season ID for a given league name.
+
+    Args:
+        league_name (str): The name of the league.
+
+    Returns:
+        str or None: The first season ID if available, otherwise None.
+    """
     league = next((league for league in leagues if league['name'] == league_name), None)
     return league['seasons'][0] if league and 'seasons' in league and league['seasons'] else None
 
-# Fetch standings based on league_id and season_id
 def fetch_standings(league_id, season_id):
+    """
+    Fetches league standings based on league ID and season ID.
+
+    Args:
+        league_id (str): The ID of the league.
+        season_id (str): The ID of the season.
+
+    Returns:
+        dict: The standings information.
+    """
     url = f"https://{api_host}/api/tournament/{league_id}/season/{season_id}/standings/total"
     return make_api_request(url)
 
-
-
-# Fetch league image
 def fetch_league_image(league_id):
+    """
+    Fetches the league image based on league ID.
+
+    Args:
+        league_id (str): The ID of the league.
+
+    Returns:
+        bytes or None: The image data if available, otherwise None.
+    """
     url = f"https://{api_host}/api/tournament/{league_id}/image"
     return make_api_request(url)
 
-# Fetch standings based on the league_id and season_id
-def fetch_standings(league_id, season_id):
-    url = f"https://{api_host}/api/tournament/{league_id}/season/{season_id}/standings/total"
-    return make_api_request(url)
-
-# Print standings to console
-def print_standings(standings):
-    if standings and 'standings' in standings:
-        rows = standings['standings'][0].get('rows', [])
-        if rows:  # Check if there are rows to print
-            print("League Standings:")
-            for row in rows:
-                team = row['team']['name']
-                position = row['position']
-                points = row['points']
-                matches = row['matches']
-                wins = row['wins']
-                draws = row['draws']
-                losses = row['losses']
-
-                # Print the team's standings to the console
-                print(f"Position: {position} | Team: {team} | Matches: {matches} | "
-                      f"Wins: {wins} | Draws: {draws} | Losses: {losses} | Points: {points}")
-        else:
-            print("No standings rows found.")
-    else:
-        print("Standings data is not in the expected format.")
-
-# Helper functions to get league names and IDs
 def get_league_names():
+    """
+    Retrieves the names of all leagues from the settings.
+
+    Returns:
+        list: A list of league names.
+    """
     return [league['name'] for league in leagues]
 
 def get_league_id(league_name):
+    """
+    Retrieves the league ID based on the league name.
+
+    Args:
+        league_name (str): The name of the league.
+
+    Returns:
+        str or None: The ID of the league if found, otherwise None.
+    """
     return league_id_lookup.get(league_name)
