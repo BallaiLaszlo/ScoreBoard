@@ -14,7 +14,6 @@ leagues = settings["leagues"]
 # Create a dictionary for league ID lookup
 league_id_lookup = {league['name']: league['id'] for league in leagues}
 
-
 # General request handler
 def make_api_request(url):
     headers = {
@@ -30,30 +29,6 @@ def make_api_request(url):
         print(f"Error: Unable to fetch data (Status Code: {response.status_code})")
         return None
 
-    return response.json()
-
-
-# Fetch league information
-def fetch_league_info(league_id):
-    url = f"https://{api_host}/api/tournament/{league_id}"
-    return make_api_request(url)
-
-# General request handler
-def make_api_request(url):
-    headers = {
-        'x-rapidapi-key': api_key,
-        'x-rapidapi-host': api_host
-    }
-    response = requests.get(url, headers=headers)
-
-    if response.status_code == 429:
-        print("Error: You have exceeded the number of allowed requests. Please try again later.")
-        return None
-    elif response.status_code != 200:
-        print(f"Error: Unable to fetch data (Status Code: {response.status_code})")
-        return None
-
-    # Check if content-type is application/json before trying to parse JSON
     if "application/json" in response.headers.get("Content-Type", ""):
         try:
             return response.json()
@@ -61,39 +36,64 @@ def make_api_request(url):
             print("Error: Failed to parse JSON response.")
             return None
     else:
-        return response.content  # Return raw content (useful for images or non-JSON data)
+        return response.content  # Return raw content for non-JSON data
+
+# Fetch league information
+# Fetch league information and retrieve the season IDs
+# Fetch league information (no need to fetch seasons from API)
+def fetch_league_info(league_id):
+    url = f"https://{api_host}/api/tournament/{league_id}"
+    league_info = make_api_request(url)
+    return league_info  # Only return league info
+
+# Fetch first season ID from settings
+def get_first_season_id(league_name):
+    league = next((league for league in leagues if league['name'] == league_name), None)
+    return league['seasons'][0] if league and 'seasons' in league and league['seasons'] else None
+
+# Fetch standings based on league_id and season_id
+def fetch_standings(league_id, season_id):
+    url = f"https://{api_host}/api/tournament/{league_id}/season/{season_id}/standings/total"
+    return make_api_request(url)
+
+
 
 # Fetch league image
 def fetch_league_image(league_id):
     url = f"https://{api_host}/api/tournament/{league_id}/image"
-    response = make_api_request(url)
+    return make_api_request(url)
 
-    if response:  # Response could be None or empty
-        return response  # Return the raw image data
-    return None  # Return None if no data is available
+# Fetch standings based on the league_id and season_id
+def fetch_standings(league_id, season_id):
+    url = f"https://{api_host}/api/tournament/{league_id}/season/{season_id}/standings/total"
+    return make_api_request(url)
 
+# Print standings to console
+def print_standings(standings):
+    if standings and 'standings' in standings:
+        rows = standings['standings'][0].get('rows', [])
+        if rows:  # Check if there are rows to print
+            print("League Standings:")
+            for row in rows:
+                team = row['team']['name']
+                position = row['position']
+                points = row['points']
+                matches = row['matches']
+                wins = row['wins']
+                draws = row['draws']
+                losses = row['losses']
 
-# Fetch standings based on the league_id
-def fetch_standings(league_id):
-    url = f"https://{api_host}/api/tournament/{league_id}/standings/total"
-    headers = {
-        "x-rapidapi-key": api_key,
-        "x-rapidapi-host": api_host
-    }
-
-    response = requests.get(url, headers=headers)
-
-    if response.status_code == 200:
-        return response.json()  # Return the JSON response if successful
+                # Print the team's standings to the console
+                print(f"Position: {position} | Team: {team} | Matches: {matches} | "
+                      f"Wins: {wins} | Draws: {draws} | Losses: {losses} | Points: {points}")
+        else:
+            print("No standings rows found.")
     else:
-        print("Failed to retrieve standings")
-        return None
-
+        print("Standings data is not in the expected format.")
 
 # Helper functions to get league names and IDs
 def get_league_names():
     return [league['name'] for league in leagues]
-
 
 def get_league_id(league_name):
     return league_id_lookup.get(league_name)

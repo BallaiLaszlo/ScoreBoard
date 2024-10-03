@@ -3,21 +3,37 @@ from tkinter import font
 from PIL import Image, ImageTk
 import io
 from ttkthemes import ThemedTk
-from api_utils import fetch_league_info, get_league_names, get_league_id, fetch_league_image, fetch_standings
+from api_utils import fetch_league_info, get_league_names, get_league_id, fetch_league_image, fetch_standings, \
+    print_standings, get_first_season_id
 
 
+# Function to update league information when a league is selected
+# Function to update league information when a league is selected
+# Function to update league information when a league is selected
+# Function to update league information when a league is selected
 # Function to update league information when a league is selected
 def update_league_info(event):
     league_name = league_combobox.get()
     league_id = get_league_id(league_name)
 
     if league_id:
-        league_info = fetch_league_info(league_id)
-        display_league_info(league_info)
-        display_league_icon(league_id)  # Now display icon instead of background
-        standings = fetch_standings(league_id)  # Fetch standings for the selected league
-        if standings:  # Check if standings are fetched successfully
-            display_standings(standings)  # Display standings in the matches label (League Table)
+        league_info = fetch_league_info(league_id)  # Get league info
+
+        if league_info:
+            display_league_info(league_info)
+            display_league_icon(league_id)
+
+            # Get the first season ID directly from settings.json
+            season_id = get_first_season_id(league_name)
+            if season_id:  # Check if a valid season ID is retrieved
+                standings = fetch_standings(league_id, season_id)
+                if standings:
+                    display_standings(standings)  # Display standings in the GUI
+                    print_standings(standings)  # Print standings to console
+                else:
+                    print("No standings data returned for the selected league.")
+            else:
+                print("No valid season ID found for the selected league.")
 
 
 # Function to display the fetched league information
@@ -32,29 +48,25 @@ def display_league_info(league_info):
         league_info_label.config(text=info_text)
 
 
-# Function to display the league icon next to the league info
+# Function to display the league icon
 def display_league_icon(league_id):
     image_data = fetch_league_image(league_id)
     if image_data:
-        # Convert the image data to a format that Tkinter can use
         image = Image.open(io.BytesIO(image_data))
-        image = image.resize((50, 50), Image.LANCZOS)  # Adjust the size of the icon
-
-        # Convert image to Tkinter format and display next to league info
+        image = image.resize((50, 50), Image.LANCZOS)
         league_icon = ImageTk.PhotoImage(image)
         league_icon_label.config(image=league_icon)
-        league_icon_label.image = league_icon  # Keep reference to avoid garbage collection
+        league_icon_label.image = league_icon
     else:
-        league_icon_label.config(image='')  # Remove icon if no image is available
+        league_icon_label.config(image='')
 
 
-# Function to display standings in the matches_label
+# Function to display standings
 def display_standings(standings):
-    matches_label.config(text="")  # Clear existing text
+    matches_label.config(text="")
     if standings and 'standings' in standings:
-        rows = standings['standings'][0].get('rows', [])  # Get the rows from the response
+        rows = standings['standings'][0].get('rows', [])
 
-        # Prepare the standings for display
         standings_text = ""
         for row in rows:
             team = row['team']['name']
@@ -65,19 +77,17 @@ def display_standings(standings):
             draws = row['draws']
             losses = row['losses']
 
-            # Append the team's standings to the text
             standings_text += (f"Position: {position} | Team: {team} | Matches: {matches} | "
                                f"Wins: {wins} | Draws: {draws} | Losses: {losses} | Points: {points}\n")
 
-        # Update the matches_label with the standings
         matches_label.config(text=standings_text)
 
 
-# Main application window using ThemedTk for improved UI
-root = ThemedTk(theme="arc")  # Add modern theme support
+# Main application window using ThemedTk
+root = ThemedTk(theme="arc")
 root.title("Football Score Application")
 root.geometry("1000x800")
-root.configure(bg="#f0f8ff")  # Subtle background color for the app
+root.configure(bg="#f0f8ff")
 
 # Font settings
 custom_font = font.Font(family="Helvetica", size=12, weight="bold")
@@ -85,11 +95,6 @@ custom_font = font.Font(family="Helvetica", size=12, weight="bold")
 # Frame for the selectors
 selectors_frame = tk.Frame(root, bg="#e0f7fa", padx=20, pady=20)
 selectors_frame.pack(pady=20, fill=tk.X)
-
-# Grid configuration for better layout control
-selectors_frame.grid_rowconfigure(0, weight=1)
-selectors_frame.grid_columnconfigure(0, weight=1)
-selectors_frame.grid_columnconfigure(1, weight=1)
 
 # League selector
 league_label = tk.Label(selectors_frame, text="Select League:", font=custom_font, bg="#e0f7fa", fg="#00796b")
@@ -107,17 +112,13 @@ league_info_frame.pack(pady=20, fill=tk.X)
 league_info_label = tk.Label(league_info_frame, text="", font=custom_font, bg="#ffffff", justify=tk.LEFT, anchor="w")
 league_info_label.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-# League icon label (this will hold the icon image)
+# League icon label
 league_icon_label = tk.Label(league_info_frame, bg="#ffffff")
 league_icon_label.pack(side=tk.LEFT, padx=10)
 
-# League Table display (matches_label)
+# League Table display
 matches_label = tk.Label(root, text="", font=custom_font, bg="#f2f2f2", justify=tk.LEFT)
 matches_label.pack(pady=20, padx=20, fill=tk.BOTH, expand=True)
-
-# Ensure responsive layout
-root.grid_rowconfigure(1, weight=1)
-root.grid_columnconfigure(0, weight=1)
 
 # Run the application loop
 root.mainloop()
