@@ -3,15 +3,11 @@ from tkinter import font
 from PIL import Image, ImageTk
 import io
 from ttkthemes import ThemedTk
-from api_utils import fetch_league_info, get_league_names, get_league_id, fetch_league_image, fetch_standings, print_standings, get_first_season_id
-
+from api_utils import fetch_league_info, get_league_names, get_league_id, fetch_league_image, fetch_standings, get_first_season_id
 
 def update_league_info(event):
     """
     Updates league information when a league is selected.
-
-    Args:
-        event: The event triggered by selecting a league from the combobox.
     """
     league_name = league_combobox.get()
     league_id = get_league_id(league_name)
@@ -28,19 +24,14 @@ def update_league_info(event):
                 standings = fetch_standings(league_id, season_id)
                 if standings:
                     display_standings(standings)
-                    print_standings(standings)
                 else:
                     print("No standings data returned for the selected league.")
             else:
                 print("No valid season ID found for the selected league.")
 
-
 def display_league_info(league_info):
     """
     Displays the fetched league information.
-
-    Args:
-        league_info (dict): The league information dictionary.
     """
     if league_info and 'uniqueTournament' in league_info:
         league_name = league_info['uniqueTournament'].get('name', 'N/A')
@@ -52,13 +43,9 @@ def display_league_info(league_info):
                      f"Most Titles Team: {most_titles_team}")
         league_info_label.config(text=info_text)
 
-
 def display_league_icon(league_id):
     """
     Displays the league icon based on the league ID.
-
-    Args:
-        league_id (str): The ID of the league.
     """
     image_data = fetch_league_image(league_id)
     if image_data:
@@ -70,13 +57,9 @@ def display_league_icon(league_id):
     else:
         league_icon_label.config(image='')
 
-
 def display_standings(standings):
     """
     Displays the league standings in the GUI.
-
-    Args:
-        standings (dict): The standings information dictionary.
     """
     matches_label.config(text="")
     if standings and 'standings' in standings:
@@ -96,7 +79,6 @@ def display_standings(standings):
                                f"Wins: {wins} | Draws: {draws} | Losses: {losses} | Points: {points}\n")
 
         matches_label.config(text=standings_text)
-
 
 # Main application window using ThemedTk
 root = ThemedTk(theme="arc")

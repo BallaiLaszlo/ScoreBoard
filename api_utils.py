@@ -1,5 +1,7 @@
 import requests
 import json
+from redis_utils import get_league_info_from_db, save_league_info_to_db, get_standings_from_db, save_standings_to_db, \
+    get_league_image_from_db, save_league_image_to_db
 
 # Load settings
 with open('settings.json', 'r') as f:
@@ -14,15 +16,10 @@ leagues = settings["leagues"]
 # Create a dictionary for league ID lookup
 league_id_lookup = {league['name']: league['id'] for league in leagues}
 
+
 def make_api_request(url):
     """
     General request handler to make API calls.
-
-    Args:
-        url (str): The URL to send the request to.
-
-    Returns:
-        dict or bytes: The JSON response data if available, otherwise raw content.
     """
     headers = {
         'x-rapidapi-key': api_key,
@@ -46,6 +43,7 @@ def make_api_request(url):
     else:
         return response.content  # Return raw content for non-JSON data
 
+
 def fetch_league_info(league_id):
     """
     Fetches league information based on league ID.
@@ -56,66 +54,70 @@ def fetch_league_info(league_id):
     Returns:
         dict: The league information.
     """
-    url = f"https://{api_host}/api/tournament/{league_id}"
-    return make_api_request(url)
+    # Check in the database first
+    league_info = get_league_info_from_db(league_id)
+
+    if league_info is None:
+        # If not found, fetch from the API
+        league_info = make_api_request(f"https://{api_host}/api/tournament/{league_id}")
+        if league_info:
+            # Save to the database
+            save_league_info_to_db(league_id, league_info)
+
+    return league_info
+
 
 def get_first_season_id(league_name):
     """
     Retrieves the first season ID for a given league name.
-
-    Args:
-        league_name (str): The name of the league.
-
-    Returns:
-        str or None: The first season ID if available, otherwise None.
     """
     league = next((league for league in leagues if league['name'] == league_name), None)
     return league['seasons'][0] if league and 'seasons' in league and league['seasons'] else None
 
+
 def fetch_standings(league_id, season_id):
     """
-    Fetches league standings based on league ID and season ID.
-
-    Args:
-        league_id (str): The ID of the league.
-        season_id (str): The ID of the season.
-
-    Returns:
-        dict: The standings information.
+    Fetches league standings based on league ID and season ID, with Redis caching.
     """
+    standings = get_standings_from_db(league_id, season_id)
+    if standings:
+        return standings
+
     url = f"https://{api_host}/api/tournament/{league_id}/season/{season_id}/standings/total"
-    return make_api_request(url)
+    standings = make_api_request(url)
+
+    if standings:
+        save_standings_to_db(league_id, season_id, standings)
+
+    return standings
+
 
 def fetch_league_image(league_id):
     """
-    Fetches the league image based on league ID.
-
-    Args:
-        league_id (str): The ID of the league.
-
-    Returns:
-        bytes or None: The image data if available, otherwise None.
+    Fetches the league image based on league ID, with Redis caching.
     """
+    image_data = get_league_image_from_db(league_id)
+    if image_data:
+        return image_data
+
     url = f"https://{api_host}/api/tournament/{league_id}/image"
-    return make_api_request(url)
+    image_data = make_api_request(url)
+
+    if image_data:
+        save_league_image_to_db(league_id, image_data)
+
+    return image_data
+
 
 def get_league_names():
     """
     Retrieves the names of all leagues from the settings.
-
-    Returns:
-        list: A list of league names.
     """
     return [league['name'] for league in leagues]
+
 
 def get_league_id(league_name):
     """
     Retrieves the league ID based on the league name.
-
-    Args:
-        league_name (str): The name of the league.
-
-    Returns:
-        str or None: The ID of the league if found, otherwise None.
     """
     return league_id_lookup.get(league_name)
