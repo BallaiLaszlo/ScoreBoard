@@ -1,21 +1,31 @@
+import logging
 import tkinter as tk
 from tkinter import font
 from PIL import Image, ImageTk
 import io
 from ttkthemes import ThemedTk
 from api_utils import fetch_league_info, get_league_names, get_league_id, fetch_league_image, fetch_standings, get_first_season_id
+from logger_setup import setup_logger
+
+setup_logger()
 
 def update_league_info(event):
     """
     Updates league information when a league is selected.
+
+    Args:
+        event: The event triggered by selecting a league from the combobox.
     """
     league_name = league_combobox.get()
     league_id = get_league_id(league_name)
+
+    logging.info(f"League selected: {league_name}")
 
     if league_id:
         league_info = fetch_league_info(league_id)
 
         if league_info:
+            logging.info(f"Fetched league info for {league_name} from API.")
             display_league_info(league_info)
             display_league_icon(league_id)
 
@@ -23,11 +33,20 @@ def update_league_info(event):
             if season_id:
                 standings = fetch_standings(league_id, season_id)
                 if standings:
+                    if 'from_db' in standings and standings['from_db']:
+                        logging.info(f"Standings for {league_name} retrieved from the database.")
+                    else:
+                        logging.info(f"Fetched standings for {league_name} from API.")
                     display_standings(standings)
                 else:
-                    print("No standings data returned for the selected league.")
+                    logging.warning(f"No standings data returned for {league_name}.")
             else:
-                print("No valid season ID found for the selected league.")
+                logging.warning(f"No valid season ID found for {league_name}.")
+        else:
+            logging.warning(f"No league info returned for {league_name}.")
+    else:
+        logging.warning(f"No league ID found for {league_name}.")
+
 
 def display_league_info(league_info):
     """

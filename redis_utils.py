@@ -1,3 +1,5 @@
+import time
+
 import redis
 import json
 
@@ -8,54 +10,85 @@ r = redis.Redis(
   password='Qv4YUmGipTypX2Cc7fGScegE79UnIlBw')
 
 
-def save_league_info_to_db(league_id, league_info):
+def save_league_info_to_db(league_id, league_info, last_fetched):
     """
-    Saves league information to Redis.
+    Saves league information to the database.
 
     Args:
         league_id (str): The ID of the league.
-        league_info (dict): The league information to be saved.
+        league_info (dict): The league information to store.
+        last_fetched (float): The timestamp of when the league info was fetched.
     """
-    league_key = f"league:{league_id}"
-    # Store league info as a JSON string
-    r.set(league_key, json.dumps(league_info))
+    # Convert league_info to JSON string if necessary
+    league_info_json = json.dumps(league_info)
+
+    # Save to Redis
+    r.set(f"league_info:{league_id}", league_info_json)
+    r.set(f"league_info_time:{league_id}", last_fetched)
 
 
 def get_league_info_from_db(league_id):
     """
-    Retrieves league information from Redis.
+    Retrieves league information and last fetched time from the database.
 
     Args:
         league_id (str): The ID of the league.
 
     Returns:
-        dict or None: The league information if found, otherwise None.
+        tuple: (league_info, last_fetched) where league_info is the league data
+                and last_fetched is the timestamp of when it was fetched.
     """
-    league_key = f"league:{league_id}"
-    league_info = r.get(league_key)
+    # Retrieve data from Redis
+    league_info = r.get(f"league_info:{league_id}")
+    last_fetched = r.get(f"league_info_time:{league_id}")
 
     if league_info:
-        # Parse the JSON string back to a dictionary
-        return json.loads(league_info)
+        # Deserialize the league_info from JSON if necessary
+        league_info = json.loads(league_info)
 
-    return None
+    # If last_fetched is None, you can set it to a default value like 0 or current time.
+    last_fetched = float(last_fetched) if last_fetched else 0.0
 
-def get_standings_from_db(league_id, season_id):
-    """
-    Retrieve standings from Redis by league and season ID.
-    """
-    standings_key = f"standings:{league_id}:{season_id}"
-    if r.exists(standings_key):
-        standings = r.get(standings_key)
-        return json.loads(standings)
-    return None
+    return league_info, last_fetched
 
-def save_standings_to_db(league_id, season_id, standings):
+
+def get_standings_from_db(league_id):
     """
-    Save standings in Redis.
+    Retrieve standings for a given league from the database.
+
+    Args:
+        league_id (str): The ID of the league.
+
+    Returns:
+        tuple: The standings data and the timestamp of the last fetch.
     """
-    standings_key = f"standings:{league_id}:{season_id}"
-    r.set(standings_key, json.dumps(standings))
+    standings_key = f"standings:{league_id}"
+    timestamp_key = f"timestamp:{league_id}"
+
+    standings_data = r.get(standings_key)
+    last_fetched = r.get(timestamp_key)
+
+    if standings_data:
+        standings_data = json.loads(standings_data)
+
+    return standings_data, float(last_fetched) if last_fetched else None
+
+
+def store_standings_in_db(league_id, standings_data, last_fetched):
+    """
+    Stores standings information to the database.
+
+    Args:
+        league_id (str): The ID of the league.
+        standings_data (dict): The standings data to store.
+        last_fetched (float): The timestamp of when the standings data was fetched.
+    """
+    standings_data_json = json.dumps(standings_data)
+
+    # Save standings data and last fetched time to Redis
+    r.set(f"standings:{league_id}", standings_data_json)
+    r.set(f"standings_time:{league_id}", last_fetched)
+
 
 def get_league_image_from_db(league_id):
     """
