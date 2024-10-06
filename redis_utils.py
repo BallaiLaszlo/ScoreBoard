@@ -1,13 +1,12 @@
-import time
-
+import logging
 import redis
 import json
 
 # Connect to Redis
 r = redis.Redis(
-  host='redis-15767.c328.europe-west3-1.gce.redns.redis-cloud.com',
-  port=15767,
-  password='Qv4YUmGipTypX2Cc7fGScegE79UnIlBw')
+    host='redis-15767.c328.europe-west3-1.gce.redns.redis-cloud.com',
+    port=15767,
+    password='Qv4YUmGipTypX2Cc7fGScegE79UnIlBw')
 
 
 def save_league_info_to_db(league_id, league_info, last_fetched):
@@ -38,16 +37,17 @@ def get_league_info_from_db(league_id):
         tuple: (league_info, last_fetched) where league_info is the league data
                 and last_fetched is the timestamp of when it was fetched.
     """
-    # Retrieve data from Redis
     league_info = r.get(f"league_info:{league_id}")
     last_fetched = r.get(f"league_info_time:{league_id}")
 
     if league_info:
-        # Deserialize the league_info from JSON if necessary
         league_info = json.loads(league_info)
 
-    # If last_fetched is None, you can set it to a default value like 0 or current time.
     last_fetched = float(last_fetched) if last_fetched else 0.0
+
+    # Log the retrieved values for debugging purposes
+    logging.debug(f"Retrieved league info from Database for {league_id}: {league_info}")
+    logging.debug(f"Last fetched time for league {league_id}: {last_fetched}")
 
     return league_info, last_fetched
 
@@ -62,16 +62,19 @@ def get_standings_from_db(league_id):
     Returns:
         tuple: The standings data and the timestamp of the last fetch.
     """
-    standings_key = f"standings:{league_id}"
-    timestamp_key = f"timestamp:{league_id}"
-
-    standings_data = r.get(standings_key)
-    last_fetched = r.get(timestamp_key)
+    standings_data = r.get(f"standings:{league_id}")
+    last_fetched = r.get(f"standings_time:{league_id}")
 
     if standings_data:
         standings_data = json.loads(standings_data)
 
-    return standings_data, float(last_fetched) if last_fetched else None
+    last_fetched = float(last_fetched) if last_fetched else None
+
+    # Log the retrieved values for debugging purposes
+    logging.debug(f"Retrieved standings from Database for {league_id}: {standings_data}")
+    logging.debug(f"Last fetched time for standings {league_id}: {last_fetched}")
+
+    return standings_data, last_fetched
 
 
 def store_standings_in_db(league_id, standings_data, last_fetched):
@@ -98,6 +101,7 @@ def get_league_image_from_db(league_id):
     if r.exists(image_key):
         return r.get(image_key)
     return None
+
 
 def save_league_image_to_db(league_id, image_data):
     """

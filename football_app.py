@@ -80,11 +80,12 @@ def display_standings(standings):
     """
     Displays the league standings in the GUI.
     """
-    matches_label.config(text="")
+    # Clear the previous standings
+    for widget in standings_content_frame.winfo_children():
+        widget.destroy()
+
     if standings and 'standings' in standings:
         rows = standings['standings'][0].get('rows', [])
-        standings_text = ""
-
         for row in rows:
             team = row['team']['name']
             position = row['position']
@@ -94,10 +95,14 @@ def display_standings(standings):
             draws = row['draws']
             losses = row['losses']
 
-            standings_text += (f"Position: {position} | Team: {team} | Matches: {matches} | "
-                               f"Wins: {wins} | Draws: {draws} | Losses: {losses} | Points: {points}\n")
-
-        matches_label.config(text=standings_text)
+            # Add the standings rows as labels inside the standings_content_frame
+            standings_label = tk.Label(
+                standings_content_frame, text=(f"Position: {position} | Team: {team} | "
+                                               f"Matches: {matches} | Wins: {wins} | "
+                                               f"Draws: {draws} | Losses: {losses} | Points: {points}"),
+                font=custom_font, bg="#f2f2f2", justify=tk.LEFT, anchor="w"
+            )
+            standings_label.pack(fill=tk.X, padx=10, pady=2)
 
 # Main application window using ThemedTk
 root = ThemedTk(theme="arc")
@@ -132,9 +137,27 @@ league_info_label.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 league_icon_label = tk.Label(league_info_frame, bg="#ffffff")
 league_icon_label.pack(side=tk.LEFT, padx=10)
 
-# League Table display
-matches_label = tk.Label(root, text="", font=custom_font, bg="#f2f2f2", justify=tk.LEFT)
-matches_label.pack(pady=20, padx=20, fill=tk.BOTH, expand=True)
+# Frame for the standings box
+standings_frame = tk.Frame(root, bg="#f2f2f2")
+standings_frame.pack(pady=20, padx=20, fill=tk.BOTH, expand=True)
+
+# Add a canvas for scrolling
+standings_canvas = tk.Canvas(standings_frame, bg="#f2f2f2")
+standings_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+# Add a scrollbar
+scrollbar = tk.Scrollbar(standings_frame, orient=tk.VERTICAL, command=standings_canvas.yview)
+scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+# Configure the canvas to work with the scrollbar
+standings_canvas.configure(yscrollcommand=scrollbar.set)
+standings_canvas.bind('<Configure>', lambda e: standings_canvas.configure(scrollregion=standings_canvas.bbox("all")))
+
+# Add a frame inside the canvas to hold the standings content
+standings_content_frame = tk.Frame(standings_canvas, bg="#f2f2f2")
+
+# Add the frame to the canvas
+standings_canvas.create_window((0, 0), window=standings_content_frame, anchor="nw")
 
 # Run the application loop
 root.mainloop()
