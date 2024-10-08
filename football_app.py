@@ -4,12 +4,18 @@ from tkinter import font, ttk
 from PIL import Image, ImageTk
 import io
 from ttkthemes import ThemedTk
-from api_utils import fetch_league_info, get_league_names, get_league_id, fetch_league_image, fetch_standings, get_first_season_id
+from api_utils import *
+from getters import *
+from redis_utils import *
 from logger_setup import setup_logger
 from button_actions import show_team_info
+from initialize import init_leagues
 
 
 setup_logger()
+
+# Initialize leagues before creating the GUI
+init_leagues()
 
 class FootballApp:
     def __init__(self, root):
@@ -23,6 +29,7 @@ class FootballApp:
 
         self.create_widgets()
 
+
     def create_widgets(self):
         # Frame for the selectors
         self.selectors_frame = tk.Frame(self.root, bg="#e0f7fa", padx=20, pady=20)
@@ -32,10 +39,9 @@ class FootballApp:
         self.league_label = tk.Label(self.selectors_frame, text="Select League:", font=self.custom_font, bg="#e0f7fa", fg="#00796b")
         self.league_label.grid(row=0, column=0, padx=10, pady=5, sticky=tk.E)
 
-        self.league_combobox = ttk.Combobox(self.selectors_frame, values=get_league_names(), font=self.custom_font, width=25)
+        self.league_combobox = ttk.Combobox(self.selectors_frame, values=[f"{league_id}: {league_name}" for league_id, league_name in get_league_name_list()], font=self.custom_font, width=25)
         self.league_combobox.bind("<<ComboboxSelected>>", self.update_league_info)
         self.league_combobox.grid(row=0, column=1, padx=10, pady=5, sticky=tk.W)
-
         # Frame for the league info box
         self.league_info_frame = tk.Frame(self.root, bg="#ffffff", bd=2, relief=tk.RIDGE, padx=20, pady=20)
         self.league_info_frame.pack(pady=20, fill=tk.X)
@@ -79,32 +85,38 @@ class FootballApp:
         Args:
             event: The event triggered by selecting a league from the combobox.
         """
-        league_name = self.league_combobox.get()
-        league_id = get_league_id(league_name)
+        selected_value = self.league_combobox.get()
+        league_id, league_name = selected_value.split(": ")
 
         logging.info(f"League selected: {league_name}")
 
         if league_id:
             league_info = fetch_league_info(league_id)
-
             if league_info:
+                league_info = league_info.decode('utf-8')  # Decode the bytes object into a string
+                league_info_dict = json.loads(league_info)  # Parse the JSON string into a dictionary
+
                 logging.info(f"Fetched league info for {league_name} from API.")
-                self.display_league_info(league_info)
+                self.display_league_info(league_info_dict)
                 self.display_league_icon(league_id)
 
-                season_id = get_first_season_id(league_name)
+                season_id = get_first_season_id(league_id)
                 if season_id:
-                    standings = fetch_standings(league_id, season_id)
+                    standings = get_standings(league_id, season_id)
                     if standings:
-                        if 'from_db' in standings and standings['from_db']:
-                            logging.info(f"Standings for {league_name} retrieved from the database.")
+                        standings = fetch_standings(league_id, season_id)
+                        if standings:
+                            if 'from_db' in standings and standings['from_db']:
+                                logging.info(f"Standings for {league_name} retrieved from the database.")
+                            else:
+                                logging.info(f"Fetched standings for {league_name} from API.")
+                            self.display_standings(standings)
                         else:
-                            logging.info(f"Fetched standings for {league_name} from API.")
-                        self.display_standings(standings)
+                            logging.warning(f"No standings data returned for {league_name}.")
                     else:
-                        logging.warning(f"No standings data returned for {league_name}.")
+                        logging.warning(f"No valid season ID found for {league_name}.")
                 else:
-                    logging.warning(f"No valid season ID found for {league_name}.")
+                    logging.warning(f"No seasons found for {league_name}.")
             else:
                 logging.warning(f"No league info returned for {league_name}.")
         else:
@@ -219,8 +231,3 @@ class FootballApp:
         # Here you can implement further actions based on the button clicked.
         # For example, showing a popup with detailed stats or navigating to a different view.
 
-
-if __name__ == "__main__":
-    root = ThemedTk(theme="arc")
-    app = FootballApp(root)
-    root.mainloop()
