@@ -61,12 +61,10 @@ def fetch_league_info(league_id):
 
     current_time = time.time()
 
-    # Check if data exists in DB and it's still valid (within the FETCH_INTERVAL)
-    if league_info and last_fetched and (current_time - last_fetched < FETCH_INTERVAL):
+    if league_info and (current_time - last_fetched < FETCH_INTERVAL):
         logging.info(f"League info for ID {league_id} retrieved from database.")
         return league_info  # Return the info from the database
 
-    # Otherwise, fetch from API
     logging.info(f"Fetching league info for ID {league_id} from API.")
     url = f"https://{api_host}/api/tournament/{league_id}"
     league_info = make_api_request(url)
@@ -105,25 +103,19 @@ def fetch_standings(league_id, season_id):
 
     current_time = time.time()
 
-    # Check if standings data exists and is still valid (within FETCH_INTERVAL)
-    if standings_data and last_fetched and (current_time - last_fetched < FETCH_INTERVAL):
+    if standings_data and (current_time - last_fetched < FETCH_INTERVAL):
         logging.info(f"Standings for league ID {league_id} retrieved from database.")
-        standings_data['from_db'] = True  # Indicate that data is from the database
         return standings_data  # Return the cached standings
 
-    # If data is stale or doesn't exist, fetch new data
     logging.info(f"Fetching standings for league ID {league_id} from API.")
     url = f"https://{api_host}/api/tournament/{league_id}/season/{season_id}/standings/total"
     standings_data = make_api_request(url)
 
     if standings_data:
-        # Store the new data and the current fetch time
-        store_standings_in_db(league_id, standings_data, current_time)
-        logging.info(f"Standings for {league_id} fetched from API.")
+        store_standings_in_db(league_id, standings_data, current_time)  # Ensure current_time is saved
+        logging.info(f"Standings for league ID {league_id} fetched from API.")
 
     return standings_data
-
-
 
 def fetch_league_image(league_id):
     """
