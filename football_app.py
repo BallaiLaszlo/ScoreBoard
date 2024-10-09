@@ -1,21 +1,15 @@
 import logging
 import tkinter as tk
-from tkinter import font, ttk
+from tkinter import font, messagebox
 from PIL import Image, ImageTk
 import io
 from ttkthemes import ThemedTk
 from api_utils import *
-from getters import *
 from redis_utils import *
 from logger_setup import setup_logger
 from button_actions import show_team_info
-from initialize import init_leagues
-
 
 setup_logger()
-
-# Initialize leagues before creating the GUI
-init_leagues()
 
 class FootballApp:
     def __init__(self, root):
@@ -29,7 +23,6 @@ class FootballApp:
 
         self.create_widgets()
 
-
     def create_widgets(self):
         # Frame for the selectors
         self.selectors_frame = tk.Frame(self.root, bg="#e0f7fa", padx=20, pady=20)
@@ -39,9 +32,12 @@ class FootballApp:
         self.league_label = tk.Label(self.selectors_frame, text="Select League:", font=self.custom_font, bg="#e0f7fa", fg="#00796b")
         self.league_label.grid(row=0, column=0, padx=10, pady=5, sticky=tk.E)
 
-        self.league_combobox = ttk.Combobox(self.selectors_frame, values=[f"{league_id}: {league_name}" for league_id, league_name in get_league_name_list()], font=self.custom_font, width=25)
+        self.league_combobox = tk.ttk.Combobox(self.selectors_frame,
+            values=[f"{league_id}: {league_name}" for league_id, league_name in get_league_name_list()],
+            font=self.custom_font, width=25)
         self.league_combobox.bind("<<ComboboxSelected>>", self.update_league_info)
         self.league_combobox.grid(row=0, column=1, padx=10, pady=5, sticky=tk.W)
+
         # Frame for the league info box
         self.league_info_frame = tk.Frame(self.root, bg="#ffffff", bd=2, relief=tk.RIDGE, padx=20, pady=20)
         self.league_info_frame.pack(pady=20, fill=tk.X)
@@ -79,48 +75,46 @@ class FootballApp:
         self.matches_label.pack()
 
     def update_league_info(self, event):
-        """
-        Updates league information when a league is selected.
-
-        Args:
-            event: The event triggered by selecting a league from the combobox.
-        """
         selected_value = self.league_combobox.get()
         league_id, league_name = selected_value.split(": ")
 
         logging.info(f"League selected: {league_name}")
 
         if league_id:
-            league_info = fetch_league_info(league_id)
-            if league_info:
-                league_info = league_info.decode('utf-8')  # Decode the bytes object into a string
-                league_info_dict = json.loads(league_info)  # Parse the JSON string into a dictionary
+            try:
+                league_info = fetch_league_info(league_id)
+                if league_info:
+                    league_info = league_info.decode('utf-8')
+                    league_info_dict = json.loads(league_info)
+                    logging.info(f"Fetched league info for {league_name} from API.")
+                    self.display_league_info(league_info_dict)
+                    self.display_league_icon(league_id)
 
-                logging.info(f"Fetched league info for {league_name} from API.")
-                self.display_league_info(league_info_dict)
-                self.display_league_icon(league_id)
-
-                season_id = get_first_season_id(league_id)
-                if season_id:
-                    standings = get_standings(league_id, season_id)
-                    if standings:
-                        standings = fetch_standings(league_id, season_id)
+                    season_id = get_first_season_id(league_id)
+                    if season_id:
+                        standings = fetch_standings(league_id, season_id)  # Fetch standings
                         if standings:
-                            if 'from_db' in standings and standings['from_db']:
-                                logging.info(f"Standings for {league_name} retrieved from the database.")
-                            else:
-                                logging.info(f"Fetched standings for {league_name} from API.")
-                            self.display_standings(standings)
+                            self.process_standings(standings, league_name)
                         else:
-                            logging.warning(f"No standings data returned for {league_name}.")
+                            logging.warning(f"No valid standings found for {league_name}.")
                     else:
-                        logging.warning(f"No valid season ID found for {league_name}.")
+                        logging.warning(f"No seasons found for {league_name}.")
                 else:
-                    logging.warning(f"No seasons found for {league_name}.")
-            else:
-                logging.warning(f"No league info returned for {league_name}.")
+                    logging.warning(f"No league info returned for {league_name}.")
+            except Exception as e:
+                logging.error(f"Error while fetching league info: {e}")
         else:
             logging.warning(f"No league ID found for {league_name}.")
+
+    def process_standings(self, standings, league_name):
+        """
+        Process the standings data.
+        """
+        if 'from_db' in standings and standings['from_db']:
+            logging.info(f"Standings for {league_name} retrieved from the database.")
+        else:
+            logging.info(f"Fetched standings for {league_name} from API.")
+        self.display_standings(standings)
 
     def display_league_info(self, league_info):
         """
@@ -169,65 +163,50 @@ class FootballApp:
 
             # Add each team's information
             for row_index, row in enumerate(rows, start=1):
-                position = row['position']
-                team = row['team']['name']
-                matches = row['matches']
-                wins = row['wins']
-                draws = row['draws']
-                losses = row['losses']
-                points = row['points']
-
-                # Create a button for the team name
-                team_button = tk.Button(self.matches_label, text=team, command=lambda t=team: show_team_info(t),
-                                        bg="#b2ebf2", anchor="w")
-                team_button.grid(row=row_index, column=1, sticky="ew", padx=5, pady=2)
-
-                # Create buttons for other columns with message boxes
-                matches_button = tk.Button(self.matches_label, text=matches,
-                                           command=lambda m=matches: self.show_info("Matches", m), bg="#b2ebf2")
-                matches_button.grid(row=row_index, column=2, padx=5, pady=2)
-
-                wins_button = tk.Button(self.matches_label, text=wins, command=lambda w=wins: self.show_info("Wins", w),
-                                        bg="#b2ebf2")
-                wins_button.grid(row=row_index, column=3, padx=5, pady=2)
-
-                draws_button = tk.Button(self.matches_label, text=draws,
-                                         command=lambda d=draws: self.show_info("Draws", d), bg="#b2ebf2")
-                draws_button.grid(row=row_index, column=4, padx=5, pady=2)
-
-                losses_button = tk.Button(self.matches_label, text=losses,
-                                          command=lambda l=losses: self.show_info("Losses", l), bg="#b2ebf2")
-                losses_button.grid(row=row_index, column=5, padx=5, pady=2)
-
-                points_button = tk.Button(self.matches_label, text=points,
-                                          command=lambda p=points: self.show_info("Points", p), bg="#b2ebf2")
-                points_button.grid(row=row_index, column=6, padx=5, pady=2)
-
-                # Label for position (as it's not clickable)
-                tk.Label(self.matches_label, text=position, bg="#e0f7fa").grid(row=row_index, column=0, padx=5, pady=2)
+                self.create_standing_row(row, row_index)
         else:
             logging.warning("No standings data available to display.")
+            # Show a message to the user if no standings are available
+            no_data_label = tk.Label(self.matches_label, text="No standings data available.", bg="#f2f2f2",
+                                     font=("Helvetica", 12))
+            no_data_label.grid(row=1, column=0, columnspan=7, pady=10)
 
-    def show_info(self, category, value):
+    def create_standing_row(self, row, row_index):
         """
-        Displays information about a specific category in a message box.
-
-        Args:
-            category: The category of the clicked button (e.g., Matches, Wins).
-            value: The value of the clicked button.
+        Creates a row in the standings for a specific team.
         """
-        message = f"{category}: {value}"
-        tk.messagebox.showinfo("Information", message)
+        position = row['position']
+        team = row['team']['name']
+        matches = row['matches']
+        wins = row['wins']
+        draws = row['draws']
+        losses = row['losses']
+        points = row['points']
 
-    def handle_click(self, category, value):
+        # Create a button for the team name
+        team_button = tk.Button(self.matches_label, text=team, command=lambda t=team: show_team_info(t),
+                                bg="#b2ebf2", anchor="w")
+        team_button.grid(row=row_index, column=1, sticky="ew", padx=5, pady=2)
+
+        # Create buttons for other columns with message boxes
+        self.create_standing_button(matches, row_index, 2)
+        self.create_standing_button(wins, row_index, 3)
+        self.create_standing_button(draws, row_index, 4)
+        self.create_standing_button(losses, row_index, 5)
+        self.create_standing_button(points, row_index, 6)
+
+        # Display position
+        position_label = tk.Label(self.matches_label, text=position, bg="#f2f2f2")
+        position_label.grid(row=row_index, column=0, sticky="ew", padx=5, pady=2)
+
+    def create_standing_button(self, value, row_index, column):
         """
-        Handles clicks on standings buttons.
-
-        Args:
-            category: The category of the clicked button (e.g., Matches, Wins).
-            value: The value of the clicked button.
+        Creates a button for standing values.
         """
-        logging.info(f"{category} button clicked with value: {value}")
-        # Here you can implement further actions based on the button clicked.
-        # For example, showing a popup with detailed stats or navigating to a different view.
+        button = tk.Button(self.matches_label, text=value, bg="#b2ebf2", anchor="w")
+        button.grid(row=row_index, column=column, sticky="ew", padx=5, pady=2)
 
+if __name__ == "__main__":
+    root = ThemedTk(theme="arc")
+    app = FootballApp(root)
+    root.mainloop()

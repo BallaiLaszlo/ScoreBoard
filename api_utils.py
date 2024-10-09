@@ -1,11 +1,11 @@
 import logging
 import time
 
-import requests
-import json
-
 from api_call import *
 from getters import *
+
+FETCH_INTERVAL = 12 * 60 * 60  # 12 hours
+
 
 def fetch_league_info(league_id):
     """
@@ -27,10 +27,7 @@ def fetch_league_info(league_id):
     url = f"https://{api_host}/api/tournament/{league_id}"
     league_info = make_api_request(url)
 
-
     return league_info
-
-FETCH_INTERVAL = 12 * 60 * 60  # 12 hours
 
 
 def fetch_standings(league_id, season_id):
@@ -46,10 +43,8 @@ def fetch_standings(league_id, season_id):
         dict: The standings information.
     """
     standings_data = get_standings(league_id, season_id)
-    last_fetched = 0
-    current_time = time.time()
 
-    if standings_data and (current_time - last_fetched < FETCH_INTERVAL):
+    if standings_data:
         logging.info(f"Standings for league ID {league_id} and season ID {season_id} retrieved from database.")
         return standings_data  # Return the cached standings
 
@@ -57,7 +52,9 @@ def fetch_standings(league_id, season_id):
     url = f"https://{api_host}/api/tournament/{league_id}/season/{season_id}/standings/total"
     standings_data = make_api_request(url)
 
+
     return standings_data
+
 
 def fetch_league_image(league_id):
     """
@@ -72,8 +69,17 @@ def fetch_league_image(league_id):
 
     return image_data
 
-# api_utils.py
+
 def fetch_league_seasons(league_id):
+    """
+    Fetches league seasons based on league ID.
+
+    Args:
+        league_id (str): The ID of the league.
+
+    Returns:
+        list: A list of seasons for the specified league.
+    """
     url = f"https://{api_host}/api/tournament/{league_id}/seasons"
     response = make_api_request(url)
     if response:
@@ -85,8 +91,7 @@ def fetch_league_seasons(league_id):
             logging.warning(f"No seasons data found for league {league_id}")
     return []
 
-
-#print(fetch_league_seasons("8"))
+#print(fetch_league_seasons("16"))
 #print(fetch_league_image("8"))
-#print(fetch_standings("8","61643"))
-#print(fetch_league_info("8"))
+print(fetch_standings("16","41087"))
+#print(fetch_league_info("12"))

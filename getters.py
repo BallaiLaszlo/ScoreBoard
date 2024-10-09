@@ -1,14 +1,14 @@
 import json
+from datetime import time
 
 import redis
 from redis import Redis
 from redis_connection import r
 
-
 with open('settings.json', 'r') as f:
     settings = json.load(f)
 
-leagues=settings["leagues"]
+leagues = settings["leagues"]
 
 def get_league_names(league_id):
     league_info = r.get(f"league_info:{league_id}")
@@ -27,6 +27,7 @@ def get_league_name_list():
             if league_name:
                 league_name_list.append((league_id, league_name))
     return league_name_list
+
 def get_seasons(league_id):
     """
     Retrieves the seasons of a league from the database.
@@ -63,7 +64,6 @@ def get_league_image_from_db(league_id):
         return r.get(image_key)
     return None
 
-
 def get_standings(league_id, season_id):
     key = f"standings:{league_id}:{season_id}"
     standings = r.get(key)
@@ -84,13 +84,33 @@ def get_league_info_from_db(league_id):
     """
     league_info = r.get(f"league_info:{league_id}")
     return league_info
+
+def get_last_fetched_time(league_id, season_id):
+    """
+    Retrieves the last fetched time for standings from Redis.
+
+    Args:
+        league_id (str): The ID of the league.
+        season_id (str): The ID of the season.
+
+    Returns:
+        float: The last fetched time in seconds since epoch, or None if not found.
+    """
+    key = f"last_fetched:{league_id}:{season_id}"
+    last_fetched = r.get(key)
+    if last_fetched:
+        return float(last_fetched.decode('utf-8'))
+    return None
+
+
+# Example usage
 #print(leagues)
 #print(get_league_names(leagues))
 #print(get_seasons("8"))
 #print(get_first_season_id("8"))
 #print(get_league_image_from_db("8"))
 #print(get_standings("8","61643"))
-#print(get_standings("8",get_first_season_id("8")))
+#print(get_standings("8", get_first_season_id("8")))
 #print(get_league_info_from_db("8"))
 #print(get_league_names("8"))
 #print(get_league_name_list())
