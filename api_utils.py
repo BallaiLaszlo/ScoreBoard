@@ -1,10 +1,8 @@
 import logging
-import time
-
-from api_call import *
-from getters import *
-
-FETCH_INTERVAL = 12 * 60 * 60  # 12 hours
+import json
+from api_call import *  # Assuming you have this to make API requests
+from getters import *   # Assuming these are your data retrieval functions
+from redis_utils import store_standings  # For storing standings in Redis
 
 
 def fetch_league_info(league_id):
@@ -32,8 +30,8 @@ def fetch_league_info(league_id):
 
 def fetch_standings(league_id, season_id):
     """
-    Fetches league standings based on league ID and season ID,
-    checking the database for a recent fetch first.
+    Fetches league standings based on league ID and season ID.
+    First checks the database for cached standings.
 
     Args:
         league_id (str): The ID of the league.
@@ -43,15 +41,17 @@ def fetch_standings(league_id, season_id):
         dict: The standings information.
     """
     standings_data = get_standings(league_id, season_id)
-
     if standings_data:
         logging.info(f"Standings for league ID {league_id} and season ID {season_id} retrieved from database.")
-        return standings_data  # Return the cached standings
+        return standings_data  # Return cached standings
 
+    # If data is not found, fetch from API
     logging.info(f"Fetching standings for league ID {league_id} and season ID {season_id} from API.")
     url = f"https://{api_host}/api/tournament/{league_id}/season/{season_id}/standings/total"
     standings_data = make_api_request(url)
 
+    # Store the new standings data in the database
+    store_standings(league_id, season_id, standings_data)
 
     return standings_data
 
@@ -91,7 +91,7 @@ def fetch_league_seasons(league_id):
             logging.warning(f"No seasons data found for league {league_id}")
     return []
 
-#print(fetch_league_seasons("16"))
-#print(fetch_league_image("8"))
-print(fetch_standings("16","41087"))
-#print(fetch_league_info("12"))
+
+print(fetch_standings("187","61714"))
+print(fetch_league_info("187"))
+print(fetch_league_seasons("187"))

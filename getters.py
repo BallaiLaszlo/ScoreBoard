@@ -96,7 +96,7 @@ def get_last_fetched_time(league_id, season_id):
     Returns:
         float: The last fetched time in seconds since epoch, or None if not found.
     """
-    key = f"last_fetched:{league_id}:{season_id}"
+    key = f"standings_time:{league_id}:{season_id}"
     last_fetched = r.get(key)
     if last_fetched:
         return float(last_fetched.decode('utf-8'))

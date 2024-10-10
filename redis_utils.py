@@ -1,8 +1,4 @@
 import logging
-import redis
-from redis import Redis
-
-from api_utils import fetch_league_seasons, fetch_league_image, fetch_standings, fetch_league_info
 from redis_connection import r
 
 import json
@@ -37,6 +33,7 @@ def store_standings(league_id, season_id, standings_data, last_fetched=0):
     """
     r.set(f"standings:{league_id}:{season_id}", json.dumps(standings_data))
     r.set(f"standings_time:{league_id}:{season_id}", last_fetched)
+    logging.info(f"Standings for league ID {league_id} and season ID {season_id} stored in the database.")
 
 
 def store_league_image(league_id, image_data):

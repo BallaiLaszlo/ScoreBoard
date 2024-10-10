@@ -5,12 +5,13 @@ from PIL import Image, ImageTk
 import io
 from ttkthemes import ThemedTk
 from api_utils import *
+from initialize import initialize_leagues
 from redis_utils import *
 from logger_setup import setup_logger
 from button_actions import show_team_info
 
 setup_logger()
-
+initialize_leagues()
 class FootballApp:
     def __init__(self, root):
         self.root = root
@@ -205,8 +206,3 @@ class FootballApp:
         """
         button = tk.Button(self.matches_label, text=value, bg="#b2ebf2", anchor="w")
         button.grid(row=row_index, column=column, sticky="ew", padx=5, pady=2)
-
-if __name__ == "__main__":
-    root = ThemedTk(theme="arc")
-    app = FootballApp(root)
-    root.mainloop()
