@@ -75,6 +75,10 @@ class FootballApp:
         self.matches_label = tk.Frame(self.standings_content_frame, bg="#f2f2f2")
         self.matches_label.pack()
 
+        self.refresh_button = tk.Button(self.root, text="Refresh Standings", font=self.custom_font, bg="#00796b",
+                                        fg="white", command=self.refresh_standings)
+        self.refresh_button.pack(pady=10)
+
     def update_league_info(self, event):
         selected_value = self.league_combobox.get()
         league_id, league_name = selected_value.split(": ")
@@ -116,6 +120,38 @@ class FootballApp:
         else:
             logging.info(f"Fetched standings for {league_name} from API.")
         self.display_standings(standings)
+
+    def refresh_standings(self):
+        selected_value = self.league_combobox.get()
+
+        if not selected_value:
+            messagebox.showwarning("Warning", "Please select a league first!")
+            return
+
+        league_id, league_name = selected_value.split(": ")
+
+        try:
+            # Delete the standings from the Redis database
+            delete_standings(league_id)
+            logging.info(f"Deleted standings for {league_name} from database.")
+
+            # Redownload the standings
+            season_id = get_first_season_id(league_id)
+            if season_id:
+                standings = fetch_standings(league_id, season_id)
+                if standings:
+                    logging.info(f"Fetched new standings for {league_name} from API.")
+                    self.process_standings(standings, league_name)
+                else:
+                    logging.warning(f"No valid standings found for {league_name}.")
+                    messagebox.showinfo("Info", "No standings data available for this league.")
+            else:
+                logging.warning(f"No seasons found for {league_name}.")
+                messagebox.showwarning("Warning", f"No season data found for {league_name}.")
+
+        except Exception as e:
+            logging.error(f"Error refreshing standings: {e}")
+            messagebox.showerror("Error", "An error occurred while refreshing standings.")
 
     def display_league_info(self, league_info):
         """
@@ -185,8 +221,10 @@ class FootballApp:
         points = row['points']
 
         # Create a button for the team name
-        team_button = tk.Button(self.matches_label, text=team, command=lambda t=team: show_team_info(t),
+        team_button = tk.Button(self.matches_label, text=team,
+                                command=lambda t_id=row['team']['id']: show_team_info(t_id),
                                 bg="#b2ebf2", anchor="w")
+
         team_button.grid(row=row_index, column=1, sticky="ew", padx=5, pady=2)
 
         # Create buttons for other columns with message boxes

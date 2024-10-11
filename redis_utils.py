@@ -50,6 +50,25 @@ def store_league_seasons(league_id, seasons):
     """
     r.set(f"league:{league_id}:seasons", json.dumps(seasons))
 
+def store_team_info(team_id, team_info, last_fetched=0):
+    """
+    Stores the team information in the database.
+
+    Args:
+        team_id (str): The ID of the team.
+        team_info (dict): The team information to store.
+        last_fetched (float): The timestamp of when the team info was fetched.
+    """
+    # Convert team_info to JSON string if necessary
+    if isinstance(team_info, dict):
+        team_info = json.dumps(team_info)
+
+    # Store team info in Redis
+    r.set(f"team_info:{team_id}", team_info)
+    r.set(f"team_info_time:{team_id}", last_fetched)
+    logging.info(f"Team info for ID {team_id} stored in the database.")
+
+
 #store_standings("8",61643,fetch_standings("8","61643"))
 #store_league_info("8",fetch_league_info("8"))
 #store_league_image("8",fetch_league_image("8"))
