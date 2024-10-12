@@ -92,25 +92,28 @@ def display_team_info(team_info, team_window):
     # Set the background color of the team window
     team_window.configure(bg=primary_color)
 
+    # Determine text color based on the background color
+    text_color = 'white' if primary_color == '#000000' else 'black'
+
     # Create labels to display team info with specified formatting
     label_font = ("Helvetica", 16, "bold")  # Larger font size and bold
 
-    team_name_label = tk.Label(team_window, text=f"Team Name: {team_name}", font=label_font, bg=primary_color, fg='black')
+    team_name_label = tk.Label(team_window, text=f"Team Name: {team_name}", font=label_font, bg=primary_color, fg=text_color)
     team_name_label.pack(pady=10)
 
-    manager_label = tk.Label(team_window, text=f"Manager: {manager_name}", font=label_font, bg=primary_color, fg='black')
+    manager_label = tk.Label(team_window, text=f"Manager: {manager_name}", font=label_font, bg=primary_color, fg=text_color)
     manager_label.pack(pady=10)
 
-    venue_label = tk.Label(team_window, text=f"Venue: {venue}", font=label_font, bg=primary_color, fg='black')
+    venue_label = tk.Label(team_window, text=f"Venue: {venue}", font=label_font, bg=primary_color, fg=text_color)
     venue_label.pack(pady=10)
 
-    venue_capacity_label = tk.Label(team_window, text=f"Venue Capacity: {venue_capacity}", font=label_font, bg=primary_color, fg='black')
+    venue_capacity_label = tk.Label(team_window, text=f"Venue Capacity: {venue_capacity}", font=label_font, bg=primary_color, fg=text_color)
     venue_capacity_label.pack(pady=10)
 
-    location_label = tk.Label(team_window, text=f"Location: {location}", font=label_font, bg=primary_color, fg='black')
+    location_label = tk.Label(team_window, text=f"Location: {location}", font=label_font, bg=primary_color, fg=text_color)
     location_label.pack(pady=10)
 
-    country_label = tk.Label(team_window, text=f"Country: {country}", font=label_font, bg=primary_color, fg='black')
+    country_label = tk.Label(team_window, text=f"Country: {country}", font=label_font, bg=primary_color, fg=text_color)
     country_label.pack(pady=10)
 
     # Close button

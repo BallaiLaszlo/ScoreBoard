@@ -146,6 +146,36 @@ def fetch_team_info(team_id):
 
     return team_info
 
+import logging
+
+def fetch_previous_matches(team_id):
+    """
+    Fetches previous matches for a team based on team ID, with Redis caching.
+
+    Args:
+        team_id (str): The ID of the team.
+
+    Returns:
+        list: A list of previous matches for the specified team.
+    """
+    previous_matches = get_team_scores(team_id)  # Check if matches exist in the database
+
+    if previous_matches:
+        logging.info(f"Previous matches for team ID {team_id} retrieved from database.")
+        return previous_matches  # Return matches from the database
+
+    logging.info(f"Fetching previous matches for team ID {team_id} from API.")
+    url = f"https://{api_host}/api/team/{team_id}/matches/previous/1"
+    previous_matches = make_api_request(url)
+
+    if previous_matches:
+        logging.info(f"Previous matches for team ID {team_id} successfully fetched from API.")
+    else:
+        logging.error(f"Failed to fetch previous matches for team ID {team_id} from API.")
+
+    return previous_matches
+
+
 
 # Example usage
 #logging.info("Fetching standings, league info, and league seasons for league ID '187'.")
@@ -153,3 +183,4 @@ def fetch_team_info(team_id):
 #print(fetch_league_info("187"))
 #print(fetch_league_seasons("187"))
 #print(fetch_team_info("2820"))
+print(fetch_previous_matches("2820"))

@@ -242,6 +242,26 @@ def get_team_id_from_standings(standings, team_name):
     logging.warning(f"No team ID found for team name {team_name}")
     return None
 
+def get_team_scores(response):
+    """
+    Extract team scores from the API response and return the entire response.
+    """
+    try:
+        # Log the raw response for debugging
+        logging.info(f"Raw API response: {response}")
+
+        # If you want to extract specific data later, you can still do so
+        team_scores = response.get('matches', [])  # Adjust according to the actual structure of your response
+
+        # Log the team scores for debugging
+        logging.info(f"Extracted team scores: {team_scores}")
+
+        # Return the entire response for further processing
+        return response
+    except Exception as e:
+        logging.error(f"Error extracting team scores: {e}")
+        return None
+
 # Example usage
 #print(leagues)
 #print(get_league_names(leagues))
