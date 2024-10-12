@@ -152,4 +152,4 @@ def fetch_team_info(team_id):
 #print(fetch_standings("187", "61714"))
 #print(fetch_league_info("187"))
 #print(fetch_league_seasons("187"))
-#print(fetch_team_info("2829"))
+#print(fetch_team_info("2820"))

@@ -253,3 +253,4 @@ def get_team_id_from_standings(standings, team_name):
 #print(get_league_info_from_db("8"))
 #print(get_league_names("8"))
 #print(get_league_name_list())
+#print(get_team_info("17"))
