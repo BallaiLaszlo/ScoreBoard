@@ -88,30 +88,31 @@ def display_team_info(team_info, team_window):
     # Extracting team colors
     primary_color = team_colors.get('primary', '#ffffff')  # Default to white if not available
     secondary_color = team_colors.get('secondary', '#000000')  # Default to black if not available
-    text_color = team_colors.get('text', '#000000')  # Default to black if not available
 
     # Set the background color of the team window
     team_window.configure(bg=primary_color)
 
-    # Create labels to display team info with text color
-    team_name_label = tk.Label(team_window, text=f"Team Name: {team_name}", font=("Helvetica", 14), bg=primary_color, fg=text_color)
+    # Create labels to display team info with specified formatting
+    label_font = ("Helvetica", 16, "bold")  # Larger font size and bold
+
+    team_name_label = tk.Label(team_window, text=f"Team Name: {team_name}", font=label_font, bg=primary_color, fg='black')
     team_name_label.pack(pady=10)
 
-    manager_label = tk.Label(team_window, text=f"Manager: {manager_name}", bg=primary_color, fg=text_color)
+    manager_label = tk.Label(team_window, text=f"Manager: {manager_name}", font=label_font, bg=primary_color, fg='black')
     manager_label.pack(pady=10)
 
-    venue_label = tk.Label(team_window, text=f"Venue: {venue}", bg=primary_color, fg=text_color)
+    venue_label = tk.Label(team_window, text=f"Venue: {venue}", font=label_font, bg=primary_color, fg='black')
     venue_label.pack(pady=10)
 
-    venue_capacity_label = tk.Label(team_window, text=f"Venue Capacity: {venue_capacity}", bg=primary_color, fg=text_color)
+    venue_capacity_label = tk.Label(team_window, text=f"Venue Capacity: {venue_capacity}", font=label_font, bg=primary_color, fg='black')
     venue_capacity_label.pack(pady=10)
 
-    location_label = tk.Label(team_window, text=f"Location: {location}", bg=primary_color, fg=text_color)
+    location_label = tk.Label(team_window, text=f"Location: {location}", font=label_font, bg=primary_color, fg='black')
     location_label.pack(pady=10)
 
-    country_label = tk.Label(team_window, text=f"Country: {country}", bg=primary_color, fg=text_color)
+    country_label = tk.Label(team_window, text=f"Country: {country}", font=label_font, bg=primary_color, fg='black')
     country_label.pack(pady=10)
 
     # Close button
-    close_button = tk.Button(team_window, text="Close", command=team_window.destroy, bg=secondary_color, fg=text_color)
+    close_button = tk.Button(team_window, text="Close", command=team_window.destroy, bg=secondary_color, fg='black')
     close_button.pack(pady=10)
