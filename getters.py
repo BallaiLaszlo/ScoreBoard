@@ -343,6 +343,47 @@ def format_last_three_matches(matches_data):
 
     return "\n".join(formatted_matches)
 
+def get_next_three_matches(response):
+    """
+    Extract the next three matches from the API response.
+
+    Args:
+        response (dict): The API response.
+
+    Returns:
+        list: A list of the next three matches.
+    """
+    try:
+        # Get the list of events (matches)
+        events = response.get('events', [])
+
+        # Initialize an empty list to store the next three matches
+        next_three_matches = []
+
+        # Iterate through the next three matches (or less if there aren't three)
+        for event in events[:3]:
+            tournament_name = event['tournament']['name']
+            home_team = event['homeTeam']['name']
+            away_team = event['awayTeam']['name']
+            status = event['status']['description']
+            start_timestamp = event['startTimestamp']
+
+            # Create a formatted string for the match
+            match_info = {
+                'tournament_name': tournament_name,
+                'home_team': home_team,
+                'away_team': away_team,
+                'status': status,
+                'start_timestamp': start_timestamp
+            }
+            next_three_matches.append(match_info)
+
+        return next_three_matches
+
+    except Exception as e:
+        logging.error(f"Error extracting next three matches: {e}")
+        return []
+
 
 # Example usage
 #print(leagues)

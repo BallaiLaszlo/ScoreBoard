@@ -231,13 +231,18 @@ class FootballApp:
                                    font=self.custom_font)
         matches_button.grid(row=row_index, column=2, padx=5, pady=5)
 
+        # New button to fetch next three matches at the end of the row
+        next_matches_button = tk.Button(self.matches_label, text="Next Matches",
+                                        command=lambda: self.fetch_and_display_next_matches(team_id), bg="#00796b",
+                                        fg="white",
+                                        font=self.custom_font)
+        next_matches_button.grid(row=row_index, column=8, padx=5, pady=5)  # Adjust column index as needed
 
         row_data = [position, team_button, matches, wins, draws, losses, points]
         for col_index, data in enumerate(row_data):
-            if col_index != 1 and col_index!= 2:  # Skip the team button column
+            if col_index != 1 and col_index != 2:  # Skip the team button column
                 label = tk.Label(self.matches_label, text=data, bg="#f2f2f2", font=self.custom_font)
                 label.grid(row=row_index, column=col_index, padx=5, pady=5)
-
     def create_standing_button(self, value, row_index, column, command=None):
         """
         Creates a button for standing values.
@@ -299,3 +304,30 @@ class FootballApp:
         # Display formatted matches
         matches_label = tk.Label(window, text=formatted_matches, padx=20, pady=20)
         matches_label.pack()
+
+    def fetch_and_display_next_matches(self, team_id):
+        """
+        Fetches the next three matches for the given team ID and displays them in a new window.
+
+        Args:
+            team_id (str): The ID of the team.
+        """
+        # Fetch the next three matches
+        next_matches = fetch_and_store_upcoming_matches(team_id)
+
+        # Create a new window to display the matches
+        matches_window = tk.Toplevel(self.matches_label)
+        matches_window.title("Next Three Matches")
+
+        # Create a label to display the matches
+        if next_matches:
+            matches_text = next_matches  # Join the matches into a single string
+        else:
+            matches_text = "No upcoming matches found."
+
+        matches_label = tk.Label(matches_window, text=matches_text, bg="#f2f2f2", font=self.custom_font)
+        matches_label.pack(padx=10, pady=10)
+
+        # Add a button to close the window
+        close_button = tk.Button(matches_window, text="Close", command=matches_window.destroy, bg="#d32f2f", fg="white")
+        close_button.pack(pady=5)

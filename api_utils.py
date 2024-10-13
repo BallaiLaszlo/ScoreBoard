@@ -2,9 +2,9 @@ import logging
 import json
 from api_call import *  # If you have this to make API requests
 from getters import get_league_info_from_db, get_standings, get_league_image_from_db, get_team_info, \
-    get_previous_matches, format_last_three_matches
+    get_previous_matches, format_last_three_matches, get_next_three_matches
 from redis_connection import r
-from redis_utils import store_standings, store_last_three_matches
+from redis_utils import store_standings, store_last_three_matches, store_next_three_matches
 
 logging.basicConfig(
     filename='log.txt',  # Log file name
@@ -176,6 +176,39 @@ def fetch_previous_matches(team_id):
         return []  # Return an empty list if no matches found
 
     return previous_matches  # Return the fetched matches
+
+
+def fetch_and_store_upcoming_matches(team_id):
+    """
+    Checks if upcoming matches for a team are in the database.
+    If not, fetches them from the API and stores the response in the database.
+
+    Args:
+        team_id (str): The ID of the team.
+    """
+    # Check if upcoming matches exist in the Redis database
+    cached_matches = r.get(f'team_next_matches:{team_id}')
+
+    if cached_matches:
+        logging.info(f"Upcoming matches for team ID {team_id} retrieved from database.")
+        return cached_matches.decode('utf-8')  # Return matches from Redis
+
+    logging.info(f"Fetching upcoming matches for team ID {team_id} from API.")
+    url = f"https://{api_host}/api/team/{team_id}/matches/next/1"
+
+    response = make_api_request(url)
+
+    if response:
+        logging.info(f"Upcoming matches for team ID {team_id} successfully fetched from API.")
+        # Extract the next three matches
+        next_three_matches = get_next_three_matches(response)
+        # Store the next three matches in Redis
+        store_next_three_matches(team_id, next_three_matches)
+        # Return the formatted string of the next three matches
+        return r.get(f'team_next_matches:{team_id}').decode('utf-8')
+    else:
+        logging.warning(f"No upcoming matches found for team ID {team_id}.")
+        return ""  # Return an empty string if no matches found
 
 # Example usage
 #logging.info("Fetching standings, league info, and league seasons for league ID '187'.")
