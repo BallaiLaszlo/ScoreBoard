@@ -10,6 +10,8 @@ from redis_utils import *
 from logger_setup import setup_logger
 from button_actions import show_team_info
 from getters import *
+import time
+from datetime import datetime, timedelta, date
 
 setup_logger()
 initialize_leagues()
@@ -248,56 +250,52 @@ class FootballApp:
         Fetches and displays the last 3 matches for a given team ID.
         Checks Redis database first, and if not found, fetches from API.
         """
-        # Create a new Toplevel window for displaying last matches
-        matches_window = tk.Toplevel(self.root)
-        matches_window.title(f"Last 3 Matches for Team ID: {team_id}")
-        matches_window.geometry("400x300")
+        try:
+            # Try fetching the last matches
+            logging.info(f"Fetching last matches for team ID {team_id}...")
+            last_matches = get_last_three_matches(team_id)
 
-        # Create a loading message
-        loading_message = messagebox.showinfo("Loading", "Fetching last 3 matches... Please wait.")
+            if not last_matches:
+                logging.info(f"No cached matches found for team ID {team_id}. Fetching from API...")
+                # Log the attempt to fetch from API
+                logging.info(f"Fetching last matches for team ID {team_id} from API...")
+                matches_data = fetch_previous_matches(team_id)
 
-        # Function to handle fetching and displaying last matches
-        def fetch_and_display():
-            try:
-                # Attempt to retrieve last matches from the Redis database
-                last_matches = get_last_three_matches(team_id)
+                if matches_data:
+                    logging.info(f"Last matches for team ID {team_id} successfully fetched from API.")
+                    # Store the retrieved last matches in Redis
+                    logging.info(f"Storing last matches for team ID {team_id} in Redis...")
+                    store_last_three_matches(team_id, format_last_three_matches(matches_data))
 
-                if last_matches:
-                    logging.info(f"Last matches for team ID {team_id} retrieved from the database.")
+                    # Wait for a few seconds to ensure it's stored
+                    logging.info(f"Waiting for 3 seconds to ensure last matches are stored in Redis...")
+                    time.sleep(3)  # Delay for 3 seconds
 
-                    # Format matches for display
-                    formatted_matches = format_last_three_matches(
-                        last_matches)  # Ensure this function formats correctly
+                    # Retrieve the last matches again from Redis
+                    logging.info(f"Retrieving last matches for team ID {team_id} from Redis again...")
+                    last_matches = get_last_three_matches(team_id)
 
-                    # Display formatted matches
-                    matches_label = tk.Label(matches_window, text=formatted_matches, padx=20, pady=20)
-                    matches_label.pack()
-                else:
-                    # Log the attempt to fetch from API
-                    logging.info(f"No cached matches found for team ID {team_id}. Fetching from API.")
+            if last_matches:
+                # Create a new Toplevel window for displaying last matches
+                matches_window = tk.Toplevel(self.root)
+                matches_window.title(f"Last 3 Matches for Team ID: {team_id}")
+                matches_window.geometry("400x300")
 
-                    # Fetch previous matches from the API
-                    matches_data = fetch_previous_matches(team_id)
+                # Display last matches
+                logging.info(f"Displaying last matches for team ID {team_id}...")
+                self.display_last_matches(last_matches, matches_window)
+            else:
+                # Handle the case where the last matches could not be fetched
+                logging.error(f"Could not fetch last matches for team ID {team_id}.")
+                messagebox.showerror("Error", f"Could not fetch last matches for team ID {team_id}.")
+        except Exception as e:
+            logging.error(f"Error fetching last matches for team ID {team_id}: {e}")
+            messagebox.showerror("Error", f"Failed to fetch last matches for team ID {team_id}. Please try again.")
 
-                    if matches_data:
-                        # Here you should store the actual response, not just the formatted string
-                        store_last_three_matches(team_id, matches_data)  # Store the raw matches data in Redis
+    def display_last_matches(self, last_matches, window):
+        # Format matches for display
+        formatted_matches = '\n\n'.join(last_matches)
 
-                        # Format matches for display
-                        formatted_matches = format_last_three_matches(matches_data)  # Format the fetched data
-
-                        # Display formatted matches
-                        matches_label = tk.Label(matches_window, text=formatted_matches, padx=20, pady=20)
-                        matches_label.pack()
-                    else:
-                        messagebox.showerror("Error", f"Could not fetch matches for team ID {team_id}.")
-                        logging.error(f"Could not fetch matches for team ID {team_id} after attempting to fetch.")
-            except Exception as e:
-                logging.error(f"Error fetching last matches for team ID {team_id}: {e}")
-                messagebox.showerror("Error", f"Failed to fetch last matches for team ID {team_id}. Please try again.")
-            finally:
-                # Close the loading message if it's still open
-                loading_message.destroy()
-
-        # Delay the fetching process to allow the loading message to display
-        matches_window.after(1000, fetch_and_display)  # Adjust delay as needed
+        # Display formatted matches
+        matches_label = tk.Label(window, text=formatted_matches, padx=20, pady=20)
+        matches_label.pack()

@@ -298,28 +298,23 @@ def get_previous_matches(team_id):
 # getters.py
 def get_last_three_matches(team_id):
     """
-    Retrieves the last three matches for a given team ID from Redis.
-
-    Args:
-        team_id (str): The ID of the team.
-
-    Returns:
-        list: A list of the last three matches for the specified team.
+    Fetches the last 3 matches for a given team ID, with Redis caching.
     """
-    # Get the previous matches from Redis
+    # Check if matches exist in the Redis database
     cached_matches = r.get(f'team_previous_matches:{team_id}')
 
     if cached_matches:
-        matches = json.loads(cached_matches)  # Load the JSON string from Redis
-        logging.info(f"Retrieved matches for team ID {team_id}: {matches}")
-
+        try:
+            matches = cached_matches.decode('utf-8').split('\n\n')  # Split the string into a list of matches
+            logging.info(f"Retrieved matches for team ID {team_id}: {matches}")
+        except Exception as e:
+            logging.error(f"Error parsing matches for team ID {team_id}: {e}")
+            return []
         # Return the last three matches
         return matches[-3:] if len(matches) >= 3 else matches
     else:
         logging.warning(f"No cached matches found for team ID {team_id}.")
         return []
-
-
 
 
 def format_last_three_matches(matches_data):

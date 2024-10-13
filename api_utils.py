@@ -2,7 +2,7 @@ import logging
 import json
 from api_call import *  # If you have this to make API requests
 from getters import get_league_info_from_db, get_standings, get_league_image_from_db, get_team_info, \
-    get_previous_matches
+    get_previous_matches, format_last_three_matches
 from redis_connection import r
 from redis_utils import store_standings, store_last_three_matches
 
@@ -151,12 +151,6 @@ def fetch_team_info(team_id):
 def fetch_previous_matches(team_id):
     """
     Fetches previous matches for a team based on team ID, with Redis caching.
-
-    Args:
-        team_id (str): The ID of the team.
-
-    Returns:
-        list: A list of previous matches for the specified team, or an empty list if none found.
     """
     # Check if matches exist in the Redis database
     cached_matches = r.get(f'team_previous_matches:{team_id}')
@@ -168,8 +162,10 @@ def fetch_previous_matches(team_id):
     logging.info(f"Fetching previous matches for team ID {team_id} from API.")
     url = f"https://{api_host}/api/team/{team_id}/matches/previous/1"
 
-    # Assume make_api_request is a defined function that fetches data from the API
     previous_matches = make_api_request(url)
+
+    # Log the raw response from the API
+    logging.info(f"Raw API response for team ID {team_id}: {previous_matches}")
 
     if previous_matches:
         logging.info(f"Previous matches for team ID {team_id} successfully fetched from API.")

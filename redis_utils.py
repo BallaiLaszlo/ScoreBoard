@@ -83,8 +83,12 @@ def store_last_three_matches(team_id, formatted_matches):
         team_id (str): The ID of the team.
         formatted_matches (str): The formatted match information to store.
     """
-    r.set(f'team_previous_matches:{team_id}', formatted_matches)
-    logging.info(f"Stored formatted matches for team ID {team_id} in Redis.")
+    if formatted_matches:
+        logging.info(f"Storing matches for team ID {team_id}: {formatted_matches}")
+        r.set(f'team_previous_matches:{team_id}', formatted_matches)
+        logging.info(f"Stored formatted matches for team ID {team_id} in Redis.")
+    else:
+        logging.warning(f"No matches to store for team ID {team_id}.")
 
 
 #store_standings("8",61643,fetch_standings("8","61643"))
