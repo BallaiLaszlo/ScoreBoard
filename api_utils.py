@@ -1,9 +1,10 @@
 import logging
 import json
-from api_call import *  # Assuming you have this to make API requests
-from getters import *  # Assuming these are your data retrieval functions
-from redis_utils import store_standings  # For storing standings in Redis
-
+from api_call import *  # If you have this to make API requests
+from getters import get_league_info_from_db, get_standings, get_league_image_from_db, get_team_info, \
+    get_previous_matches
+from redis_connection import r
+from redis_utils import store_standings, store_last_three_matches
 
 logging.basicConfig(
     filename='log.txt',  # Log file name
@@ -146,7 +147,6 @@ def fetch_team_info(team_id):
 
     return team_info
 
-import logging
 
 def fetch_previous_matches(team_id):
     """
@@ -156,26 +156,30 @@ def fetch_previous_matches(team_id):
         team_id (str): The ID of the team.
 
     Returns:
-        list: A list of previous matches for the specified team.
+        list: A list of previous matches for the specified team, or an empty list if none found.
     """
-    previous_matches = get_team_scores(team_id)  # Check if matches exist in the database
+    # Check if matches exist in the Redis database
+    cached_matches = r.get(f'team_previous_matches:{team_id}')
 
-    if previous_matches:
+    if cached_matches:
         logging.info(f"Previous matches for team ID {team_id} retrieved from database.")
-        return previous_matches  # Return matches from the database
+        return json.loads(cached_matches)  # Return matches from Redis
 
     logging.info(f"Fetching previous matches for team ID {team_id} from API.")
     url = f"https://{api_host}/api/team/{team_id}/matches/previous/1"
+
+    # Assume make_api_request is a defined function that fetches data from the API
     previous_matches = make_api_request(url)
 
     if previous_matches:
         logging.info(f"Previous matches for team ID {team_id} successfully fetched from API.")
+        # Cache the fetched matches in Redis for future use
+        r.set(f'team_previous_matches:{team_id}', json.dumps(previous_matches))  # Store in Redis
     else:
-        logging.error(f"Failed to fetch previous matches for team ID {team_id} from API.")
+        logging.warning(f"No previous matches found for team ID {team_id}.")
+        return []  # Return an empty list if no matches found
 
-    return previous_matches
-
-
+    return previous_matches  # Return the fetched matches
 
 # Example usage
 #logging.info("Fetching standings, league info, and league seasons for league ID '187'.")
@@ -183,4 +187,4 @@ def fetch_previous_matches(team_id):
 #print(fetch_league_info("187"))
 #print(fetch_league_seasons("187"))
 #print(fetch_team_info("2820"))
-print(fetch_previous_matches("2820"))
+#print(fetch_previous_matches("2820"))

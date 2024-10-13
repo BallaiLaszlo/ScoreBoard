@@ -1,8 +1,5 @@
 import json
 import logging
-from datetime import time
-import redis
-from redis import Redis
 from redis_connection import r
 
 
@@ -262,6 +259,96 @@ def get_team_scores(response):
         logging.error(f"Error extracting team scores: {e}")
         return None
 
+
+import json
+
+
+def get_previous_matches(team_id):
+    """
+    Retrieve previous matches for a team from Redis.
+
+    Args:
+        team_id (str): The ID of the team.
+
+    Returns:
+        list: A list of previous matches for the specified team, or None if not found.
+    """
+    # Use the correct Redis key format
+    previous_matches_json = r.get(f"team_previous_matches:{team_id}")
+
+    if previous_matches_json:
+        try:
+            # Deserialize the JSON string into a Python object (dictionary)
+            previous_matches = json.loads(previous_matches_json)
+
+            # Log the deserialized data (optional, for debugging)
+            print(f"Deserialized data for team {team_id}: {previous_matches}")
+
+            # Return the list of events (matches)
+            return previous_matches.get('events') if 'events' in previous_matches else None
+
+        except json.JSONDecodeError as e:
+            print(f"Failed to decode JSON: {e}")
+            return None
+    else:
+        print(f"No previous matches found for team ID {team_id}.")
+        return None
+
+
+# getters.py
+def get_last_three_matches(team_id):
+    """
+    Retrieves the last three matches for a given team ID from Redis.
+
+    Args:
+        team_id (str): The ID of the team.
+
+    Returns:
+        list: A list of the last three matches for the specified team.
+    """
+    # Get the previous matches from Redis
+    cached_matches = r.get(f'team_previous_matches:{team_id}')
+
+    if cached_matches:
+        matches = json.loads(cached_matches)  # Load the JSON string from Redis
+        logging.info(f"Retrieved matches for team ID {team_id}: {matches}")
+
+        # Return the last three matches
+        return matches[-3:] if len(matches) >= 3 else matches
+    else:
+        logging.warning(f"No cached matches found for team ID {team_id}.")
+        return []
+
+
+
+
+def format_last_three_matches(matches_data):
+    # Get the list of events (matches)
+    events = matches_data.get('events', [])
+
+    # Initialize an empty list to store formatted match information
+    formatted_matches = []
+
+    # Iterate through the last three matches (or less if there aren't three)
+    for event in events[:3]:
+        tournament_name = event['tournament']['name']
+        home_team = event['homeTeam']['name']
+        away_team = event['awayTeam']['name']
+        home_score = event['homeScore']['current']
+        away_score = event['awayScore']['current']
+        status = event['status']['description']
+
+        # Create a formatted string for the match
+        match_info = (
+            f"Tournament: {tournament_name}\n"
+            f"{home_team} {home_score} - {away_score} {away_team}\n"
+            f"Status: {status}\n"
+        )
+        formatted_matches.append(match_info)
+
+    return "\n".join(formatted_matches)
+
+
 # Example usage
 #print(leagues)
 #print(get_league_names(leagues))
@@ -274,3 +361,4 @@ def get_team_scores(response):
 #print(get_league_names("8"))
 #print(get_league_name_list())
 #print(get_team_info("17"))
+

@@ -1,10 +1,13 @@
-from getters import get_team_info
-from redis_utils import store_team_info
-from api_utils import fetch_team_info
 import logging
 import tkinter as tk
 from tkinter import messagebox
-import time  # Import time for sleep function
+
+from redis_connection import r
+from redis_utils import store_team_info, store_last_three_matches
+from api_utils import fetch_team_info, fetch_previous_matches
+from getters import get_team_info, get_last_three_matches, format_last_three_matches
+import time
+
 
 
 def show_team_info(team_id):
@@ -119,3 +122,5 @@ def display_team_info(team_info, team_window):
     # Close button
     close_button = tk.Button(team_window, text="Close", command=team_window.destroy, bg=secondary_color, fg='black')
     close_button.pack(pady=10)
+
+

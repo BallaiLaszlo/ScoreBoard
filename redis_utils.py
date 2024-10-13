@@ -1,7 +1,8 @@
 import logging
-from redis_connection import r
-
 import json
+
+from getters import get_last_three_matches
+from redis_connection import r
 
 
 
@@ -39,9 +40,14 @@ def store_standings(league_id, season_id, standings_data, last_fetched=0):
 def store_league_image(league_id, image_data):
     """
     Save league image in Redis.
+
+    Args:
+        league_id (str): The ID of the league.
+        image_data (bytes or str): The image data to store (can be binary data or a URL).
     """
     image_key = f"league_image:{league_id}"
     r.set(image_key, image_data)
+    logging.info(f"Stored image for league ID {league_id} in Redis.")
 
 
 def store_league_seasons(league_id, seasons):
@@ -67,6 +73,18 @@ def store_team_info(team_id, team_info, last_fetched=0):
     r.set(f"team_info:{team_id}", team_info)
     r.set(f"team_info_time:{team_id}", last_fetched)
     logging.info(f"Team info for ID {team_id} stored in the database.")
+
+
+def store_last_three_matches(team_id, formatted_matches):
+    """
+    Stores the last three formatted matches for a given team ID in Redis.
+
+    Args:
+        team_id (str): The ID of the team.
+        formatted_matches (str): The formatted match information to store.
+    """
+    r.set(f'team_previous_matches:{team_id}', formatted_matches)
+    logging.info(f"Stored formatted matches for team ID {team_id} in Redis.")
 
 
 #store_standings("8",61643,fetch_standings("8","61643"))

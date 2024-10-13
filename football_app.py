@@ -9,6 +9,7 @@ from initialize import initialize_leagues
 from redis_utils import *
 from logger_setup import setup_logger
 from button_actions import show_team_info
+from getters import *
 
 setup_logger()
 initialize_leagues()
@@ -209,9 +210,6 @@ class FootballApp:
             no_data_label.grid(row=1, column=0, columnspan=7, pady=10)
 
     def create_standing_row(self, row, row_index):
-        """
-        Creates a row in the standings for a specific team.
-        """
         position = row['position']
         team = row['team']['name']
         matches = row['matches']
@@ -219,28 +217,87 @@ class FootballApp:
         draws = row['draws']
         losses = row['losses']
         points = row['points']
+        team_id = row['team']['id']
 
-        # Create a button for the team name
         team_button = tk.Button(self.matches_label, text=team,
-                                command=lambda t_id=row['team']['id']: show_team_info(t_id),
-                                bg="#b2ebf2", anchor="w")
+                                command=lambda: show_team_info(team_id), bg="#00796b", fg="white",
+                                font=self.custom_font)
+        team_button.grid(row=row_index, column=1, padx=5, pady=5)
 
-        team_button.grid(row=row_index, column=1, sticky="ew", padx=5, pady=2)
+        matches_button = tk.Button(self.matches_label, text=matches,
+                                   command=lambda: self.show_last_matches(team_id), bg="#00796b", fg="white",
+                                   font=self.custom_font)
+        matches_button.grid(row=row_index, column=2, padx=5, pady=5)
 
-        # Create buttons for other columns with message boxes
-        self.create_standing_button(matches, row_index, 2)
-        self.create_standing_button(wins, row_index, 3)
-        self.create_standing_button(draws, row_index, 4)
-        self.create_standing_button(losses, row_index, 5)
-        self.create_standing_button(points, row_index, 6)
 
-        # Display position
-        position_label = tk.Label(self.matches_label, text=position, bg="#f2f2f2")
-        position_label.grid(row=row_index, column=0, sticky="ew", padx=5, pady=2)
+        row_data = [position, team_button, matches, wins, draws, losses, points]
+        for col_index, data in enumerate(row_data):
+            if col_index != 1 and col_index!= 2:  # Skip the team button column
+                label = tk.Label(self.matches_label, text=data, bg="#f2f2f2", font=self.custom_font)
+                label.grid(row=row_index, column=col_index, padx=5, pady=5)
 
-    def create_standing_button(self, value, row_index, column):
+    def create_standing_button(self, value, row_index, column, command=None):
         """
         Creates a button for standing values.
         """
-        button = tk.Button(self.matches_label, text=value, bg="#b2ebf2", anchor="w")
+        button = tk.Button(self.matches_label, text=value, bg="#b2ebf2", anchor="w", command=command)
         button.grid(row=row_index, column=column, sticky="ew", padx=5, pady=2)
+
+    def show_last_matches(self, team_id):
+        """
+        Fetches and displays the last 3 matches for a given team ID.
+        Checks Redis database first, and if not found, fetches from API.
+        """
+        # Create a new Toplevel window for displaying last matches
+        matches_window = tk.Toplevel(self.root)
+        matches_window.title(f"Last 3 Matches for Team ID: {team_id}")
+        matches_window.geometry("400x300")
+
+        # Create a loading message
+        loading_message = messagebox.showinfo("Loading", "Fetching last 3 matches... Please wait.")
+
+        # Function to handle fetching and displaying last matches
+        def fetch_and_display():
+            try:
+                # Attempt to retrieve last matches from the Redis database
+                last_matches = get_last_three_matches(team_id)
+
+                if last_matches:
+                    logging.info(f"Last matches for team ID {team_id} retrieved from the database.")
+
+                    # Format matches for display
+                    formatted_matches = format_last_three_matches(
+                        last_matches)  # Ensure this function formats correctly
+
+                    # Display formatted matches
+                    matches_label = tk.Label(matches_window, text=formatted_matches, padx=20, pady=20)
+                    matches_label.pack()
+                else:
+                    # Log the attempt to fetch from API
+                    logging.info(f"No cached matches found for team ID {team_id}. Fetching from API.")
+
+                    # Fetch previous matches from the API
+                    matches_data = fetch_previous_matches(team_id)
+
+                    if matches_data:
+                        # Here you should store the actual response, not just the formatted string
+                        store_last_three_matches(team_id, matches_data)  # Store the raw matches data in Redis
+
+                        # Format matches for display
+                        formatted_matches = format_last_three_matches(matches_data)  # Format the fetched data
+
+                        # Display formatted matches
+                        matches_label = tk.Label(matches_window, text=formatted_matches, padx=20, pady=20)
+                        matches_label.pack()
+                    else:
+                        messagebox.showerror("Error", f"Could not fetch matches for team ID {team_id}.")
+                        logging.error(f"Could not fetch matches for team ID {team_id} after attempting to fetch.")
+            except Exception as e:
+                logging.error(f"Error fetching last matches for team ID {team_id}: {e}")
+                messagebox.showerror("Error", f"Failed to fetch last matches for team ID {team_id}. Please try again.")
+            finally:
+                # Close the loading message if it's still open
+                loading_message.destroy()
+
+        # Delay the fetching process to allow the loading message to display
+        matches_window.after(1000, fetch_and_display)  # Adjust delay as needed
