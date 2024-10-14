@@ -1,6 +1,6 @@
 import logging
 import json
-from api_call import *  # If you have this to make API requests
+from api_call import *
 from getters import get_league_info_from_db, get_standings, get_league_image_from_db, get_team_info, \
     get_previous_matches, format_last_three_matches, get_next_three_matches
 from redis_connection import r
