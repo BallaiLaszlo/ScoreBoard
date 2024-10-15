@@ -307,12 +307,6 @@ class FootballApp:
         matches_label = tk.Label(window, text=formatted_matches, padx=20, pady=20)
         matches_label.pack()
 
-    import matplotlib.pyplot as plt
-    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
-    import matplotlib.pyplot as plt
-    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
     def fetch_and_display_next_matches(self, team_id):
         """
         Fetches the next three matches for the given team ID and displays them in a new window.
