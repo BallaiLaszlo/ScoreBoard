@@ -1,16 +1,18 @@
-import logging
+
 import tkinter as tk
 from tkinter import font, messagebox
 from PIL import Image, ImageTk
 import io
-from ttkthemes import ThemedTk
 from api_utils import *
 from initialize import initialize_leagues
+from odd_calculator import get_match_odds_1x2
 from redis_utils import *
 from logger_setup import setup_logger
 from button_actions import show_team_info
 from getters import *
 import time
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from datetime import datetime, timedelta, date
 
 setup_logger()
@@ -305,6 +307,12 @@ class FootballApp:
         matches_label = tk.Label(window, text=formatted_matches, padx=20, pady=20)
         matches_label.pack()
 
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
     def fetch_and_display_next_matches(self, team_id):
         """
         Fetches the next three matches for the given team ID and displays them in a new window.
@@ -328,64 +336,55 @@ class FootballApp:
         matches_label = tk.Label(matches_window, text=matches_text, bg="#f2f2f2", font=self.custom_font)
         matches_label.pack(padx=10, pady=10)
 
-         # Add the "Predict" button below the matches display
-        predict_button = tk.Button(matches_window, text="Predict",
-                                   command=lambda: self.predict_next_matches(next_matches), bg="#00796b", fg="white")
-        predict_button.pack(pady=10)
+        # Fetch the match odds for each match
+        matches = next_matches.split('\n\n')
+        for match in matches:
+            match_id = match.split('\n')[-1].split(': ')[-1]  # Assuming the match ID is the last line of the match text
+            odds_1x2 = get_match_odds_1x2(match_id)
 
-        # Add a button to close the window
+            if odds_1x2:
+                # Create a frame to hold the match text and predict button
+                match_frame = tk.Frame(matches_window)
+                match_frame.pack(padx=10, pady=5)
+
+                # Create a label to display the match text
+                match_text_label = tk.Label(match_frame, text=match, bg="#f2f2f2", font=self.custom_font)
+                match_text_label.pack()
+
+                # Create a button to predict the match
+                predict_button = tk.Button(match_frame, text="Predict Next Match",
+                                           command=lambda match_id=match_id: self.predict_match(match_id), bg="#00796b",
+                                           fg="white")
+                predict_button.pack(pady=5)
+
+                # Add a button to close the window
         close_button = tk.Button(matches_window, text="Close", command=matches_window.destroy, bg="#d32f2f", fg="white")
         close_button.pack(pady=5)
 
-    def predict_next_matches(self, next_matches):
+    def predict_match(self, match_id):
         """
-        Function to handle the prediction logic for the next matches based on recent form.
+        Displays the odds percentages for the given match ID in a new window.
 
         Args:
-            next_matches (list): List of the next matches fetched.
+            match_id (str): The ID of the match.
         """
-        if not next_matches:
-            messagebox.showinfo("No Matches", "There are no upcoming matches to predict.")
-            return
+        # Fetch the match odds for the given match ID
+        odds_1x2 = get_match_odds_1x2(match_id)
 
-        predictions = []
+        if odds_1x2:
+            # Calculate the percentages
+            total = sum([self.calculate_percentage(odds) for odds in odds_1x2.values()])
+            percentages = {name: self.calculate_percentage(odds) / total * 100 for name, odds in odds_1x2.items()}
 
-        for match in next_matches:
-            # If match is a string, try to convert it to a dictionary
-            if isinstance(match, str):
-                try:
-                    match = json.loads(match)
-                except json.JSONDecodeError:
-                    messagebox.showerror("Error", "Failed to decode match data.")
-                    return
+            # Create a new window to display the odds percentages
+            odds_window = tk.Toplevel(self.matches_label)
+            odds_window.title("Match Odds")
 
-            # Ensure match is now a dictionary before proceeding
-            if isinstance(match, dict):
-                home_team = match['homeTeam']['name']
-                away_team = match['awayTeam']['name']
+            # Create a label to display the odds percentages
+            odds_text = "\n".join([f"{name}: {percentage:.2f}%" for name, percentage in percentages.items()])
+            odds_label = tk.Label(odds_window, text=odds_text, bg="#f2f2f2", font=self.custom_font)
+            odds_label.pack(padx=10, pady=10)
 
-                # Fetch recent form (e.g., last 5 matches) for both teams
-                home_team_form = self.fetch_team_form(match['homeTeam']['id'])
-                away_team_form = self.fetch_team_form(match['awayTeam']['id'])
-
-                # Calculate win percentage based on last 5 matches for both teams
-                home_team_win_pct = self.calculate_win_percentage(home_team_form)
-                away_team_win_pct = self.calculate_win_percentage(away_team_form)
-
-                # Prediction logic: Compare win percentages
-                if home_team_win_pct > away_team_win_pct:
-                    prediction = f"{home_team} is likely to win"
-                elif home_team_win_pct < away_team_win_pct:
-                    prediction = f"{away_team} is likely to win"
-                else:
-                    prediction = "The match is likely to be a draw"
-
-                predictions.append(f"Prediction for {home_team} vs {away_team}: {prediction}")
-            else:
-                messagebox.showerror("Error", "Invalid match data format.")
-
-        # Show the predictions in a message box
-        messagebox.showinfo("Predictions", "\n".join(predictions))
-
-    def calculate_win_percentage(matches):
-        pass
+            # Add a button to close the window
+            close_button = tk.Button(odds_window, text="Close", command=odds_window.destroy, bg="#d32f2f", fg="white")
+            close_button.pack(pady=5)

@@ -90,32 +90,34 @@ def store_last_three_matches(team_id, formatted_matches):
     else:
         logging.warning(f"No matches to store for team ID {team_id}.")
 
+
 def store_next_three_matches(team_id, next_three_matches):
     """
-    Stores the next three formatted matches for a given team ID in Redis.
+    Stores the next three matches for a given team ID in Redis.
 
     Args:
         team_id (str): The ID of the team.
-        next_three_matches (list): The list of next three matches.
+        next_three_matches (list): A list of dictionaries containing the next three matches.
     """
     if next_three_matches:
-        logging.info(f"Storing next three matches for team ID {team_id}: {next_three_matches}")
-        formatted_matches = []
+        logging.info(f"Storing matches for team ID {team_id}: {next_three_matches}")
+        match_info = []
         for match in next_three_matches:
-            match_info = (
+            match_string = (
                 f"Tournament: {match['tournament_name']}\n"
                 f"{match['home_team']} vs {match['away_team']}\n"
                 f"Status: {match['status']}\n"
-                f"Start Time: {match['start_timestamp']}\n"
+                f"Start Timestamp: {match['start_timestamp']}\n"
+                f"Match ID: {match['match_id']}\n"
             )
-            formatted_matches.append(match_info)
-        r.set(f'team_next_matches:{team_id}', '\n\n'.join(formatted_matches))
+            match_info.append(match_string)
+        r.set(f'team_next_matches:{team_id}', "\n\n".join(match_info))
         logging.info(f"Stored next three matches for team ID {team_id} in Redis.")
     else:
         logging.warning(f"No matches to store for team ID {team_id}.")
 
 
-#store_standings("8",61643,fetch_standings("8","61643"))
+    #store_standings("8",61643,fetch_standings("8","61643"))
 #store_league_info("8",fetch_league_info("8"))
 #store_league_image("8",fetch_league_image("8"))
 #store_league_seasons("8",fetch_league_seasons(8))

@@ -343,6 +343,7 @@ def format_last_three_matches(matches_data):
 
     return "\n".join(formatted_matches)
 
+
 def get_next_three_matches(response):
     """
     Extract the next three matches from the API response.
@@ -367,6 +368,7 @@ def get_next_three_matches(response):
             away_team = event['awayTeam']['name']
             status = event['status']['description']
             start_timestamp = event['startTimestamp']
+            match_id = event['id']  # Extract the match ID
 
             # Create a formatted string for the match
             match_info = {
@@ -374,7 +376,8 @@ def get_next_three_matches(response):
                 'home_team': home_team,
                 'away_team': away_team,
                 'status': status,
-                'start_timestamp': start_timestamp
+                'start_timestamp': start_timestamp,
+                'match_id': match_id  # Include the match ID
             }
             next_three_matches.append(match_info)
 
@@ -385,7 +388,7 @@ def get_next_three_matches(response):
         return []
 
 
-# Example usage
+    # Example usage
 #print(leagues)
 #print(get_league_names(leagues))
 #print(get_seasons("8"))
