@@ -328,6 +328,64 @@ class FootballApp:
         matches_label = tk.Label(matches_window, text=matches_text, bg="#f2f2f2", font=self.custom_font)
         matches_label.pack(padx=10, pady=10)
 
+         # Add the "Predict" button below the matches display
+        predict_button = tk.Button(matches_window, text="Predict",
+                                   command=lambda: self.predict_next_matches(next_matches), bg="#00796b", fg="white")
+        predict_button.pack(pady=10)
+
         # Add a button to close the window
         close_button = tk.Button(matches_window, text="Close", command=matches_window.destroy, bg="#d32f2f", fg="white")
         close_button.pack(pady=5)
+
+    def predict_next_matches(self, next_matches):
+        """
+        Function to handle the prediction logic for the next matches based on recent form.
+
+        Args:
+            next_matches (list): List of the next matches fetched.
+        """
+        if not next_matches:
+            messagebox.showinfo("No Matches", "There are no upcoming matches to predict.")
+            return
+
+        predictions = []
+
+        for match in next_matches:
+            # If match is a string, try to convert it to a dictionary
+            if isinstance(match, str):
+                try:
+                    match = json.loads(match)
+                except json.JSONDecodeError:
+                    messagebox.showerror("Error", "Failed to decode match data.")
+                    return
+
+            # Ensure match is now a dictionary before proceeding
+            if isinstance(match, dict):
+                home_team = match['homeTeam']['name']
+                away_team = match['awayTeam']['name']
+
+                # Fetch recent form (e.g., last 5 matches) for both teams
+                home_team_form = self.fetch_team_form(match['homeTeam']['id'])
+                away_team_form = self.fetch_team_form(match['awayTeam']['id'])
+
+                # Calculate win percentage based on last 5 matches for both teams
+                home_team_win_pct = self.calculate_win_percentage(home_team_form)
+                away_team_win_pct = self.calculate_win_percentage(away_team_form)
+
+                # Prediction logic: Compare win percentages
+                if home_team_win_pct > away_team_win_pct:
+                    prediction = f"{home_team} is likely to win"
+                elif home_team_win_pct < away_team_win_pct:
+                    prediction = f"{away_team} is likely to win"
+                else:
+                    prediction = "The match is likely to be a draw"
+
+                predictions.append(f"Prediction for {home_team} vs {away_team}: {prediction}")
+            else:
+                messagebox.showerror("Error", "Invalid match data format.")
+
+        # Show the predictions in a message box
+        messagebox.showinfo("Predictions", "\n".join(predictions))
+
+    def calculate_win_percentage(matches):
+        pass
