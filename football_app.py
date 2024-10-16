@@ -334,25 +334,35 @@ class FootballApp:
                                        justify=tk.LEFT)
                 match_label.pack(padx=5, pady=5)
 
-                # Fetch and display match odds as percentages
-                odds_1x2 = get_match_odds_1x2(match['match_id'])
-                if odds_1x2:
-                    percentages = calculate_percentage(odds_1x2)
-                    odds_text = "Win Probabilities:\n" + "\n".join(
-                        [f"{name}: {percentage:.2f}%" for name, percentage in percentages.items()])
-                    odds_label = tk.Label(match_frame, text=odds_text, bg="#f2f2f2", font=self.custom_font,
-                                          justify=tk.LEFT)
-                    odds_label.pack(padx=5, pady=5)
+                # Get match prediction info
+                match_info = get_match_prediction_info(match['match_id'])
+
+                if match_info:
+                    # Display odds as percentages
+                    odds_1x2 = get_match_odds_1x2(match['match_id'])
+                    if odds_1x2:
+                        percentages = calculate_percentage(odds_1x2)
+                        odds_text = "Win Probabilities:\n" + "\n".join(
+                            [f"{name}: {percentage:.2f}%" for name, percentage in percentages.items()])
+                        odds_label = tk.Label(match_frame, text=odds_text, bg="#f2f2f2", font=self.custom_font,
+                                              justify=tk.LEFT)
+                        odds_label.pack(padx=5, pady=5)
+                    else:
+                        odds_label = tk.Label(match_frame, text="Odds not available", bg="#f2f2f2",
+                                              font=self.custom_font)
+                        odds_label.pack(padx=5, pady=5)
+
+                    # Create prediction button
+                    predict_button = tk.Button(match_frame, text="Predict Match",
+                                               command=lambda m=match_info: self.predict_match(**m), bg="#00796b",
+                                               fg="white")
+                    predict_button.pack(pady=5)
                 else:
-                    odds_label = tk.Label(match_frame, text="Odds not available", bg="#f2f2f2", font=self.custom_font)
-                    odds_label.pack(padx=5, pady=5)
-                # Create a button to predict the match
-                predict_button = tk.Button(match_frame, text="Predict Match",
-                                           command=lambda mid=match['match_id']: self.predict_match(mid),
-                                           bg="#00796b", fg="white")
-                predict_button.pack(pady=5)
+                    error_label = tk.Label(match_frame, text="Unable to fetch match details", bg="#f2f2f2",
+                                           font=self.custom_font)
+                    error_label.pack(padx=5, pady=5)
         else:
-            no_matches_label = tk.Label(matches_window, text="No upcoming matches found.", bg="#f2f2f2",
+            no_matches_label = tk.Label(matches_window, text="No upcoming matches found. ", bg="#f2f2f2",
                                         font=self.custom_font)
             no_matches_label.pack(padx=10, pady=10)
 
@@ -360,9 +370,9 @@ class FootballApp:
         close_button = tk.Button(matches_window, text="Close", command=matches_window.destroy, bg="#d32f2f", fg="white")
         close_button.pack(pady=10)
 
-    def predict_match(self, match_id):
+    def predict_match(self, **match_info):
         """
-        Calls the predict_match function from odd_calculator and displays the result.
+        Calls the predict_match function and displays the result.
         """
-        prediction = predict_match(match_id)
+        prediction = predict_match(**match_info)
         messagebox.showinfo("Match Prediction", prediction)

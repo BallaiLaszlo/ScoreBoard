@@ -188,21 +188,18 @@ def fetch_and_store_upcoming_matches(team_id):
     Returns:
         list: A list of the next three matches.
     """
+    logging.info(f"Fetching upcoming matches for team ID {team_id}")
     try:
-        # Construct the API URL
         url = f"https://api.sofascore.com/api/v1/team/{team_id}/events/next/0"
-
-        # Make the API request
         response = make_api_request(url)
 
         if not response:
-            logging.error(f"Failed to fetch upcoming matches for team ID {team_id}")
+            logging.error(f"No response received for team ID {team_id}")
             return []
 
-        # Extract events from the response
         events = response.get('events', [])
+        logging.info(f"Received {len(events)} events for team ID {team_id}")
 
-        # Process the next three matches
         next_three_matches = []
         for event in events[:3]:
             match_info = {
@@ -210,16 +207,19 @@ def fetch_and_store_upcoming_matches(team_id):
                 'tournament_name': event['tournament']['name'],
                 'home_team': event['homeTeam']['name'],
                 'away_team': event['awayTeam']['name'],
+                'home_team_id': event['homeTeam']['id'],
+                'away_team_id': event['awayTeam']['id'],
                 'status': event['status']['description'],
                 'start_timestamp': event['startTimestamp']
             }
             next_three_matches.append(match_info)
+            logging.info(f"Processed match: {match_info}")
 
         # Store in Redis
         if next_three_matches:
             redis_key = f'team_next_matches:{team_id}'
             r.set(redis_key, json.dumps(next_three_matches))
-            logging.info(f"Stored next three matches for team ID {team_id} in Redis")
+            logging.info(f"Stored {len(next_three_matches)} matches for team ID {team_id} in Redis")
         else:
             logging.warning(f"No upcoming matches found for team ID {team_id}")
 
@@ -229,6 +229,35 @@ def fetch_and_store_upcoming_matches(team_id):
         logging.error(f"Error in fetch_and_store_upcoming_matches for team ID {team_id}: {str(e)}")
         return []
 
+
+def fetch_and_store_match_details(match_id):
+    """
+    Fetches match details from the API and stores them in Redis.
+
+    Args:
+        match_id (str): The ID of the match.
+
+    Returns:
+        dict: The match details if successful, None otherwise.
+    """
+    logging.info(f"Fetching match details for match ID: {match_id}")
+
+    try:
+        url = f"https://{api_host}/api/match/{match_id}"
+        match_details = make_api_request(url)
+
+        if match_details:
+            # The response is already a JSON string, so we don't need to encode it again
+            r.set(f"match_details:{match_id}", match_details)
+            logging.info(f"Stored match details for match ID: {match_id}")
+            return json.loads(match_details)
+        else:
+            logging.error(f"Failed to fetch match details for match ID: {match_id}")
+            return None
+
+    except Exception as e:
+        logging.error(f"Error in fetch_and_store_match_details: {str(e)}")
+        return None
 # Example usage
 #logging.info("Fetching standings, league info, and league seasons for league ID '187'.")
 #print(fetch_standings("187", "61714"))
