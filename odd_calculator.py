@@ -1,8 +1,17 @@
 import json
 import logging
+from tkinter import messagebox
 
 from api_call import api_host, make_api_request
+from api_utils import fetch_previous_matches, fetch_and_store_upcoming_matches, fetch_standings
+from getters import get_team_info
 from redis_connection import r
+
+logging.basicConfig(
+    filename='log.txt',  # Log file name
+    level=logging.INFO,  # Log level
+    format='%(asctime)s - %(levelname)s - %(message)s'  # Log message format
+)
 
 
 def fetch_match_odds(match_id):
@@ -112,41 +121,110 @@ def calculate_percentage(odds):
     Returns:
         dict: A dictionary where each key is a possible outcome and each value is the corresponding percentage.
     """
-    # Initialize an empty dictionary to store the percentages
+    # Initialize an empty dictionary to store the probabilities
+    probabilities = {}
+
+    # Calculate the implied probability for each outcome
+    for outcome, values in odds.items():
+        # Split the fractional value into numerator and denominator
+        numerator, denominator = map(int, values['fractional_value'].split('/'))
+
+        # Calculate the implied probability
+        implied_probability = denominator / (numerator + denominator)
+        probabilities[outcome] = implied_probability
+
+    # Calculate the total implied probability
+    total_probability = sum(probabilities.values())
+
+    # Normalize the probabilities to get the fair percentages
     percentages = {}
-
-    # Initialize a variable to store the total probability
-    total_probability = 0
-
-    # Iterate over each outcome in the odds
-    for outcome, values in odds.items():
-        # Split the fractional value into numerator and denominator
-        numerator, denominator = map(int, values['fractional_value'].split('/'))
-
-        # Calculate the decimal odds
-        decimal_odds = (numerator + denominator) / numerator
-
-        # Calculate the probability
-        probability = 1 / decimal_odds
-
-        # Add the probability to the total probability
-        total_probability += probability
-
-    # Iterate over each outcome in the odds again
-    for outcome, values in odds.items():
-        # Split the fractional value into numerator and denominator
-        numerator, denominator = map(int, values['fractional_value'].split('/'))
-
-        # Calculate the decimal odds
-        decimal_odds = (numerator + denominator) / numerator
-
-        # Calculate the probability
-        probability = 1 / decimal_odds
-
-        # Calculate the percentage
+    for outcome, probability in probabilities.items():
         percentage = (probability / total_probability) * 100
-
-        # Store the percentage in the dictionary
         percentages[outcome] = round(percentage, 2)
 
     return percentages
+
+def parse_upcoming_matches(upcoming_match_dict):
+    matches = upcoming_match_dict.split('\n\n')
+    parsed_matches = []
+    for match in matches:
+        lines = match.split('\n')
+        match_dict = {
+            'tournament': lines[0].split(': ')[1],
+            'teams': lines[1].split(' vs '),
+            'status': lines[2].split(': ')[1],
+            'match_id': lines[4].split(': ')[1]
+        }
+        parsed_matches.append(match_dict)
+    return parsed_matches
+
+def predict_match(league_id, season_id, home_team_id, away_team_id, match_id):
+    """
+    Predicts the score of a match based on team standings, last 3 matches, and odds.
+    """
+    logging.info(f"Predicting match: {home_team_id} vs {away_team_id}")
+
+    # 1. Get team standings
+    standings = fetch_standings(league_id, season_id)
+    if not standings:
+        return "Unable to fetch standings data."
+
+    home_standing = next((team for team in standings['standings'][0]['rows'] if team['team']['id'] == home_team_id), None)
+    away_standing = next((team for team in standings['standings'][0]['rows'] if team['team']['id'] == away_team_id), None)
+
+    if not home_standing or not away_standing:
+        return "Unable to find team standings."
+
+    # 2. Get last 3 matches for each team
+    home_previous = fetch_previous_matches(home_team_id)
+    away_previous = fetch_previous_matches(away_team_id)
+
+    if not home_previous or not away_previous:
+        return "Unable to fetch previous matches."
+
+    # 3. Get match odds
+    odds_1x2 = get_match_odds_1x2(match_id)
+    if not odds_1x2:
+        return "Unable to fetch match odds."
+
+    # 4. Calculate prediction factors
+    home_factor = calculate_team_factor(home_standing, home_previous[-3:], odds_1x2['home'])
+    away_factor = calculate_team_factor(away_standing, away_previous[-3:], odds_1x2['away'])
+
+    # 5. Predict score
+    home_score = round(home_factor * 2)  # Multiply by 2 as a baseline
+    away_score = round(away_factor * 2)
+
+    # 6. Adjust for home advantage
+    home_score += 1
+
+    # Get team names
+    home_team_name = get_team_info(home_team_id)['name']
+    away_team_name = get_team_info(away_team_id)['name']
+
+    prediction_message = f"Predicted Score:\n{home_team_name} {home_score} - {away_score} {away_team_name}\n\n"
+    prediction_message += f"Prediction Factors:\n"
+    prediction_message += f"{home_team_name}: {home_factor:.2f}\n"
+    prediction_message += f"{away_team_name}: {away_factor:.2f}\n"
+
+    logging.info(f"Prediction: {prediction_message}")
+
+    return prediction_message
+
+def calculate_team_factor(standing, last_3_matches, odds):
+    """
+    Calculates a team's factor based on standing, recent form, and odds.
+    """
+    # Standing factor (normalized)
+    standing_factor = (20 - standing['position']) / 20  # Assumes 20 teams in league
+
+    # Recent form factor
+    form_factor = sum(3 if match['winner'] == 'home' else (1 if match['winner'] == 'draw' else 0) for match in last_3_matches) / 9
+
+    # Odds factor (inverse of odds, normalized)
+    odds_factor = 1 / odds / 3  # Divide by 3 to normalize
+
+    # Combine factors (you can adjust weights as needed)
+    team_factor = (standing_factor * 0.4) + (form_factor * 0.4) + (odds_factor * 0.2)
+
+    return team_factor

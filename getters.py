@@ -388,7 +388,18 @@ def get_next_three_matches(response):
         return []
 
 
-    # Example usage
+def get_next_match_info(upcoming_matches):
+    if not upcoming_matches or not isinstance(upcoming_matches, list):
+        return None
+
+    for match in upcoming_matches:
+        match_id = match.get('match_id')
+        home_team = match.get('home_team')
+        away_team = match.get('away_team')
+        if match_id and home_team and away_team:
+            return match_id, home_team, away_team
+    return None
+
 #print(leagues)
 #print(get_league_names(leagues))
 #print(get_seasons("8"))

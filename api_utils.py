@@ -180,35 +180,54 @@ def fetch_previous_matches(team_id):
 
 def fetch_and_store_upcoming_matches(team_id):
     """
-    Checks if upcoming matches for a team are in the database.
-    If not, fetches them from the API and stores the response in the database.
+    Fetches upcoming matches for a team and stores them in Redis.
 
     Args:
         team_id (str): The ID of the team.
+
+    Returns:
+        list: A list of the next three matches.
     """
-    # Check if upcoming matches exist in the Redis database
-    cached_matches = r.get(f'team_next_matches:{team_id}')
+    try:
+        # Construct the API URL
+        url = f"https://api.sofascore.com/api/v1/team/{team_id}/events/next/0"
 
-    if cached_matches:
-        logging.info(f"Upcoming matches for team ID {team_id} retrieved from database.")
-        return cached_matches.decode('utf-8')  # Return matches from Redis
+        # Make the API request
+        response = make_api_request(url)
 
-    logging.info(f"Fetching upcoming matches for team ID {team_id} from API.")
-    url = f"https://{api_host}/api/team/{team_id}/matches/next/1"
+        if not response:
+            logging.error(f"Failed to fetch upcoming matches for team ID {team_id}")
+            return []
 
-    response = make_api_request(url)
+        # Extract events from the response
+        events = response.get('events', [])
 
-    if response:
-        logging.info(f"Upcoming matches for team ID {team_id} successfully fetched from API.")
-        # Extract the next three matches
-        next_three_matches = get_next_three_matches(response)
-        # Store the next three matches in Redis
-        store_next_three_matches(team_id, next_three_matches)
-        # Return the formatted string of the next three matches
-        return r.get(f'team_next_matches:{team_id}').decode('utf-8')
-    else:
-        logging.warning(f"No upcoming matches found for team ID {team_id}.")
-        return ""  # Return an empty string if no matches found
+        # Process the next three matches
+        next_three_matches = []
+        for event in events[:3]:
+            match_info = {
+                'match_id': event['id'],
+                'tournament_name': event['tournament']['name'],
+                'home_team': event['homeTeam']['name'],
+                'away_team': event['awayTeam']['name'],
+                'status': event['status']['description'],
+                'start_timestamp': event['startTimestamp']
+            }
+            next_three_matches.append(match_info)
+
+        # Store in Redis
+        if next_three_matches:
+            redis_key = f'team_next_matches:{team_id}'
+            r.set(redis_key, json.dumps(next_three_matches))
+            logging.info(f"Stored next three matches for team ID {team_id} in Redis")
+        else:
+            logging.warning(f"No upcoming matches found for team ID {team_id}")
+
+        return next_three_matches
+
+    except Exception as e:
+        logging.error(f"Error in fetch_and_store_upcoming_matches for team ID {team_id}: {str(e)}")
+        return []
 
 # Example usage
 #logging.info("Fetching standings, league info, and league seasons for league ID '187'.")
