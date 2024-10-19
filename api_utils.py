@@ -242,15 +242,21 @@ def fetch_and_store_match_details(match_id):
     """
     logging.info(f"Fetching match details for match ID: {match_id}")
 
+    # Check if match details exist in Redis
+    cached_details = r.get(f"match_details:{match_id}")
+    if cached_details:
+        logging.info(f"Match details for ID {match_id} retrieved from database.")
+        return json.loads(cached_details)
+
     try:
         url = f"https://{api_host}/api/match/{match_id}"
         match_details = make_api_request(url)
 
         if match_details:
-            # The response is already a JSON string, so we don't need to encode it again
-            r.set(f"match_details:{match_id}", match_details)
-            logging.info(f"Stored match details for match ID: {match_id}")
-            return json.loads(match_details)
+            # Store the match details in Redis
+            r.set(f"match_details:{match_id}", json.dumps(match_details))
+            logging.info(f"Match details for ID {match_id} successfully fetched from API and stored in database.")
+            return match_details
         else:
             logging.error(f"Failed to fetch match details for match ID: {match_id}")
             return None

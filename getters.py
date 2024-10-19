@@ -14,7 +14,6 @@ with open('settings.json', 'r') as f:
 
 leagues = settings["leagues"]
 
-
 def get_league_names(league_id):
     """
     Retrieve league information from Redis by league ID.
@@ -389,6 +388,7 @@ def get_next_three_matches(response):
         return []
 
 
+
 def get_next_match_info(upcoming_matches):
     if not upcoming_matches or not isinstance(upcoming_matches, list):
         return None
@@ -400,52 +400,6 @@ def get_next_match_info(upcoming_matches):
         if match_id and home_team and away_team:
             return match_id, home_team, away_team
     return None
-
-
-def get_match_prediction_info(match_id):
-    """
-    Retrieves all necessary information for match prediction.
-
-    Args:
-        match_id (str): The ID of the match.
-
-    Returns:
-        dict: A dictionary containing league_id, season_id, home_team_id, away_team_id, and match_id.
-              Returns None if any information is missing.
-    """
-    logging.info(f"Fetching prediction info for match ID: {match_id}")
-
-    try:
-        # Fetch match details
-        match_details_json = r.get(f"match_details:{match_id}")
-        if not match_details_json:
-            logging.error(f"Match details not found for match ID: {match_id}")
-            return None
-
-        match_details = json.loads(match_details_json)
-        event = match_details.get('event', {})
-
-        # Extract required information
-        league_id = event.get('tournament', {}).get('uniqueTournament', {}).get('id')
-        season_id = event.get('season', {}).get('id')
-        home_team_id = event.get('homeTeam', {}).get('id')
-        away_team_id = event.get('awayTeam', {}).get('id')
-
-        if not all([league_id, season_id, home_team_id, away_team_id]):
-            logging.error(f"Missing required information for match ID: {match_id}")
-            return None
-
-        return {
-            'league_id': league_id,
-            'season_id': season_id,
-            'home_team_id': home_team_id,
-            'away_team_id': away_team_id,
-            'match_id': match_id
-        }
-
-    except Exception as e:
-        logging.error(f"Error in get_match_prediction_info: {str(e)}")
-        return None
 
 #print(leagues)
 #print(get_league_names(leagues))
