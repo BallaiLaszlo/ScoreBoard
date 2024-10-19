@@ -1,6 +1,7 @@
 import logging
 import tkinter as tk
 from tkinter import messagebox
+from typing import Dict, Any
 
 from redis_connection import r
 from redis_utils import store_team_info, store_last_three_matches
@@ -9,13 +10,14 @@ from getters import get_team_info, get_last_three_matches, format_last_three_mat
 import time
 
 
-def show_team_info(team_id):
+def show_team_info(team_id: str) -> None:
     """
     Fetches and displays team information. Checks Redis database first,
     and if not found, fetches from API.
-    """
 
-    # Create a new Toplevel window for displaying team info
+    Args:
+        team_id (str): The ID of the team to fetch information for.
+    """
     team_window = tk.Toplevel()
     team_window.title("Team Information")
     team_window.geometry("400x300")
@@ -74,11 +76,14 @@ def show_team_info(team_id):
     team_window.after(1000, fetch_and_display)  # Adjust delay as needed
 
 
-def display_team_info(team_info, team_window):
+def display_team_info(team_info: Dict[str, Any], team_window: tk.Toplevel) -> None:
     """
     Displays the team information in the specified Tkinter window.
+
+    Args:
+        team_info (Dict[str, Any]): A dictionary containing team information.
+        team_window (tk.Toplevel): The Tkinter window to display the information in.
     """
-    # Extract team details
     team_name = team_info.get('name', 'Unknown')
     manager_name = team_info.get('manager', 'Unknown')
     venue = team_info.get('venue', 'Unknown')

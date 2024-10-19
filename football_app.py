@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import font, messagebox
 import tkinter.font as tkfont
+from typing import Dict, Any, Optional, List
+
 from PIL import Image, ImageTk
 import io
 from api_utils import *
@@ -21,7 +23,19 @@ initialize_leagues()
 
 
 class FootballApp:
-    def __init__(self, root):
+    """
+       A class representing the main Football Score Application.
+
+       This class creates the GUI for the application and handles user interactions.
+       """
+
+    def __init__(self, root: tk.Tk) -> None:
+        """
+        Initialize the FootballApp.
+
+        Args:
+            root (tk.Tk): The root Tkinter window.
+        """
         self.root = root
         self.root.title("Football Score Application")
         self.root.geometry("1000x800")
@@ -32,8 +46,8 @@ class FootballApp:
 
         self.create_widgets()
 
-    def create_widgets(self):
-        # Frame for the selectors
+    def create_widgets(self) -> None:
+        """Create and place all widgets in the application window."""
         self.selectors_frame = tk.Frame(self.root, bg="#e0f7fa", padx=20, pady=20)
         self.selectors_frame.pack(pady=20, fill=tk.X)
 
@@ -91,7 +105,13 @@ class FootballApp:
                                         fg="white", command=self.refresh_standings)
         self.refresh_button.pack(pady=10)
 
-    def update_league_info(self, event):
+    def update_league_info(self, event: tk.Event) -> None:
+        """
+        Update the league information when a league is selected.
+
+        Args:
+            event (tk.Event): The event triggered by league selection.
+        """
         selected_value = self.league_combobox.get()
         league_id, league_name = selected_value.split(": ")
 
@@ -123,9 +143,13 @@ class FootballApp:
         else:
             logging.warning(f"No league ID found for {league_name}.")
 
-    def process_standings(self, standings, league_name):
+    def process_standings(self, standings: Dict[str, Any], league_name: str) -> None:
         """
-        Process the standings data.
+        Process the standings data for display.
+
+        Args:
+            standings (Dict[str, Any]): The standings data.
+            league_name (str): The name of the league.
         """
         if 'from_db' in standings and standings['from_db']:
             logging.info(f"Standings for {league_name} retrieved from the database.")
@@ -133,7 +157,8 @@ class FootballApp:
             logging.info(f"Fetched standings for {league_name} from API.")
         self.display_standings(standings)
 
-    def refresh_standings(self):
+    def refresh_standings(self) -> None:
+        """Refresh the standings data for the selected league."""
         selected_value = self.league_combobox.get()
 
         if not selected_value:
@@ -165,9 +190,12 @@ class FootballApp:
             logging.error(f"Error refreshing standings: {e}")
             messagebox.showerror("Error", "An error occurred while refreshing standings.")
 
-    def display_league_info(self, league_info):
+    def display_league_info(self, league_info: Dict[str, Any]) -> None:
         """
-        Displays the fetched league information.
+        Display the league information in the GUI.
+
+        Args:
+            league_info (Dict[str, Any]): The league information to display.
         """
         if league_info and 'uniqueTournament' in league_info:
             league_name = league_info['uniqueTournament'].get('name', 'N/A')
@@ -179,9 +207,12 @@ class FootballApp:
                          f"Most Titles Team: {most_titles_team}")
             self.league_info_label.config(text=info_text)
 
-    def display_league_icon(self, league_id):
+    def display_league_icon(self, league_id: str) -> None:
         """
-        Displays the league icon based on the league ID.
+        Display the league icon in the GUI.
+
+        Args:
+            league_id (str): The ID of the league.
         """
         image_data = fetch_league_image(league_id)
         if image_data:
@@ -193,11 +224,13 @@ class FootballApp:
         else:
             self.league_icon_label.config(image='')
 
-    def display_standings(self, standings):
+    def display_standings(self, standings: Dict[str, Any]) -> None:
         """
-        Displays the league standings in the GUI using a grid layout.
+        Display the league standings in the GUI.
+
+        Args:
+            standings (Dict[str, Any]): The standings data to display.
         """
-        # Clear previous standings
         for widget in self.matches_label.winfo_children():
             widget.destroy()
 
@@ -220,7 +253,14 @@ class FootballApp:
                                      font=("Helvetica", 12))
             no_data_label.grid(row=1, column=0, columnspan=7, pady=10)
 
-    def create_standing_row(self, row, row_index):
+    def create_standing_row(self, row: Dict[str, Any], row_index: int) -> None:
+        """
+        Create a row in the standings table.
+
+        Args:
+            row (Dict[str, Any]): The data for a single row in the standings.
+            row_index (int): The index of the row.
+        """
         position = row['position']
         team = row['team']['name']
         matches = row['matches']
@@ -253,17 +293,25 @@ class FootballApp:
                 label = tk.Label(self.matches_label, text=data, bg="#f2f2f2", font=self.custom_font)
                 label.grid(row=row_index, column=col_index, padx=5, pady=5)
 
-    def create_standing_button(self, value, row_index, column, command=None):
+    def create_standing_button(self, value: str, row_index: int, column: int, command: Optional[callable] = None) -> None:
         """
-        Creates a button for standing values.
+        Create a button for standing values.
+
+        Args:
+            value (str): The text to display on the button.
+            row_index (int): The row index for grid placement.
+            column (int): The column index for grid placement.
+            command (Optional[callable]): The command to execute when the button is clicked.
         """
         button = tk.Button(self.matches_label, text=value, bg="#b2ebf2", anchor="w", command=command)
         button.grid(row=row_index, column=column, sticky="ew", padx=5, pady=2)
 
-    def show_last_matches(self, team_id):
+    def show_last_matches(self, team_id: str) -> None:
         """
-        Fetches and displays the last 3 matches for a given team ID.
-        Checks Redis database first, and if not found, fetches from API.
+        Fetch and display the last 3 matches for a given team ID.
+
+        Args:
+            team_id (str): The ID of the team.
         """
         try:
             # Try fetching the last matches
@@ -307,8 +355,14 @@ class FootballApp:
             logging.error(f"Error fetching last matches for team ID {team_id}: {e}")
             messagebox.showerror("Error", f"Failed to fetch last matches for team ID {team_id}. Please try again.")
 
-    def display_last_matches(self, last_matches, window):
-        # Create a custom font
+    def display_last_matches(self, last_matches: List[str], window: tk.Toplevel) -> None:
+        """
+        Display the last matches in a new window.
+
+        Args:
+            last_matches (List[str]): The last matches to display.
+            window (tk.Toplevel): The window to display the matches in.
+        """
         custom_font = tkfont.Font(family="Helvetica", size=14, weight="bold")
 
         # Format matches for display
@@ -353,9 +407,12 @@ class FootballApp:
         y = (window.winfo_screenheight() // 2) - (height // 2)
         window.geometry('{}x{}+{}+{}'.format(width, height, x, y))
 
-    def fetch_and_display_next_matches(self, team_id):
+    def fetch_and_display_next_matches(self, team_id: str) -> None:
         """
-        Fetches the next three matches for the given team ID and displays them in a new window.
+        Fetch and display the next three matches for a given team ID.
+
+        Args:
+            team_id (str): The ID of the team.
         """
         next_matches = fetch_and_store_upcoming_matches(team_id)
 
@@ -375,9 +432,13 @@ class FootballApp:
         close_button = tk.Button(matches_window, text="Close", command=matches_window.destroy, bg="#d32f2f", fg="white")
         close_button.pack(pady=10)
 
-    def create_match_frame(self, parent_window, match):
+    def create_match_frame(self, parent_window: tk.Toplevel, match: Dict[str, Any]) -> None:
         """
-        Creates a frame to display a match's details including tournament, teams, odds, and a predict button.
+        Create a frame to display a match's details.
+
+        Args:
+            parent_window (tk.Toplevel): The parent window.
+            match (Dict[str, Any]): The match details.
         """
         match_frame = tk.Frame(parent_window, bg="#f2f2f2", relief=tk.RAISED, borderwidth=2)
         match_frame.pack(padx=10, pady=10, fill=tk.X)
@@ -402,9 +463,12 @@ class FootballApp:
             odds_label = tk.Label(match_frame, text="Odds not available", bg="#f2f2f2", font=self.custom_font)
             odds_label.pack(padx=5, pady=5)
 
-    def predict_match(self, match):
+    def predict_match(self, match: Dict[str, Any]) -> None:
         """
-        Predicts the match score for the given match details.
+        Predict the match score for a given match.
+
+        Args:
+            match (Dict[str, Any]): The match details.
         """
         league_id = self.league_combobox.get().split(":")[0].strip()
         season_id = get_first_season_id(league_id)
@@ -418,8 +482,14 @@ class FootballApp:
         # Create and show a custom message dialog
         self.show_custom_message("Match Prediction", prediction)
 
-    def show_custom_message(self, title, message):
-        # Create a new toplevel window
+    def show_custom_message(self, title: str, message: str) -> None:
+        """
+        Show a custom message dialog.
+
+        Args:
+            title (str): The title of the dialog.
+            message (str): The message to display.
+        """
         dialog = tk.Toplevel(self.root)
         dialog.title(title)
         dialog.geometry("500x400")

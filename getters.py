@@ -1,5 +1,7 @@
 import json
 import logging
+from typing import Optional, Dict, Any, Tuple, List
+
 from redis_connection import r
 
 logging.basicConfig(
@@ -14,9 +16,15 @@ with open('settings.json', 'r') as f:
 leagues = settings["leagues"]
 
 
-def get_league_names(league_id):
+def get_league_names(league_id: str) -> Optional[Dict[str, Any]]:
     """
     Retrieve league information from Redis by league ID.
+
+    Args:
+        league_id (str): The ID of the league.
+
+    Returns:
+        Optional[Dict[str, Any]]: League information dictionary or None if not found.
     """
     league_info = r.get(f"league_info:{league_id}")
     if league_info:
@@ -27,9 +35,12 @@ def get_league_names(league_id):
     return None
 
 
-def get_league_name_list():
+def get_league_name_list() -> List[Tuple[str, str]]:
     """
     Get a list of league IDs and names.
+
+    Returns:
+        List[Tuple[str, str]]: A list of tuples containing league IDs and names.
     """
     league_name_list = []
     for league_id in leagues:
@@ -47,7 +58,7 @@ def get_league_name_list():
     return league_name_list
 
 
-def get_seasons(league_id):
+def get_seasons(league_id: str) -> Optional[List[str]]:
     """
     Retrieves the seasons of a league from the database.
 
@@ -55,7 +66,7 @@ def get_seasons(league_id):
         league_id (str): The ID of the league.
 
     Returns:
-        list: The season IDs of the league.
+        Optional[List[str]]: The season IDs of the league or None if not found.
     """
     seasons_key = f"league:{league_id}:seasons"
     seasons_data = r.get(seasons_key)
@@ -68,9 +79,15 @@ def get_seasons(league_id):
     return None
 
 
-def get_first_season_id(league_id):
+def get_first_season_id(league_id: str) -> Optional[str]:
     """
     Retrieve the first season ID from Redis.
+
+    Args:
+        league_id (str): The ID of the league.
+
+    Returns:
+        Optional[str]: The first season ID or None if not found.
     """
     temp = get_seasons(league_id)
     if temp:
@@ -80,9 +97,15 @@ def get_first_season_id(league_id):
     return None
 
 
-def get_league_image_from_db(league_id):
+def get_league_image_from_db(league_id: str) -> Optional[bytes]:
     """
     Retrieve league image from Redis by league ID.
+
+    Args:
+        league_id (str): The ID of the league.
+
+    Returns:
+        Optional[bytes]: The image data or None if not found.
     """
     image_key = f"league_image:{league_id}"
     if r.exists(image_key):
@@ -93,9 +116,16 @@ def get_league_image_from_db(league_id):
     return None
 
 
-def get_standings(league_id, season_id):
+def get_standings(league_id: str, season_id: str) -> Optional[Dict[str, Any]]:
     """
     Retrieve standings for a specific league and season from Redis.
+
+    Args:
+        league_id (str): The ID of the league.
+        season_id (str): The ID of the season.
+
+    Returns:
+        Optional[Dict[str, Any]]: Standings data dictionary or None if not found.
     """
     key = f"standings:{league_id}:{season_id}"
     standings = r.get(key)
@@ -107,7 +137,7 @@ def get_standings(league_id, season_id):
     return None
 
 
-def get_league_info_from_db(league_id):
+def get_league_info_from_db(league_id: str) -> Optional[bytes]:
     """
     Retrieves league information from the database using the league ID.
 
@@ -115,7 +145,7 @@ def get_league_info_from_db(league_id):
         league_id (str): The ID of the league.
 
     Returns:
-        str: The league name, or None if not found.
+        Optional[bytes]: The league information or None if not found.
     """
     league_info = r.get(f"league_info:{league_id}")
     if league_info:
@@ -125,7 +155,7 @@ def get_league_info_from_db(league_id):
     return league_info
 
 
-def get_last_fetched_time(league_id, season_id):
+def get_last_fetched_time(league_id: str, season_id: str) -> Optional[float]:
     """
     Retrieves the last fetched time for standings from Redis.
 
@@ -134,7 +164,7 @@ def get_last_fetched_time(league_id, season_id):
         season_id (str): The ID of the season.
 
     Returns:
-        float: The last fetched time in seconds since epoch, or None if not found.
+        Optional[float]: The last fetched time in seconds since epoch or None if not found.
     """
     key = f"standings_time:{league_id}:{season_id}"
     last_fetched = r.get(key)
@@ -145,7 +175,7 @@ def get_last_fetched_time(league_id, season_id):
     return None
 
 
-def delete_standings(league_id):
+def delete_standings(league_id: str) -> None:
     """
     Deletes the standings data for the given league from the Redis database.
 
@@ -163,7 +193,7 @@ def delete_standings(league_id):
         logging.error(f"Error deleting standings for league {league_id}: {e}")
 
 
-def get_team_info(team_id):
+def get_team_info(team_id: str) -> Optional[Dict[str, Any]]:
     """
     Retrieves the team information from the database.
 
@@ -171,9 +201,8 @@ def get_team_info(team_id):
         team_id (str): The ID of the team.
 
     Returns:
-        dict: The team information including name, location, manager, venue, country, etc.
+        Optional[Dict[str, Any]]: Team information dictionary or None if not found.
     """
-    # Fetch the team info as a string from Redis
     team_info = r.get(f"team_info:{team_id}")
 
     if team_info:
@@ -226,18 +255,17 @@ def get_team_info(team_id):
         return None
 
 
-def get_team_id_from_standings(standings, team_name):
+def get_team_id_from_standings(standings: Dict[str, Any], team_name: str) -> Optional[int]:
     """
     Retrieves the team ID for a specific team from the standings data.
 
     Args:
-        standings (dict): The standings data.
+        standings (Dict[str, Any]): The standings data.
         team_name (str): The name of the team to find.
 
     Returns:
-        int: The ID of the team if found, otherwise None.
+        Optional[int]: The ID of the team if found, otherwise None.
     """
-    # Iterate through the standings rows to find the team by its name
     for row in standings.get('standings', [])[0].get('rows', []):
         team = row.get('team', {})
         if team.get('name') == team_name:
@@ -247,9 +275,15 @@ def get_team_id_from_standings(standings, team_name):
     return None
 
 
-def get_team_scores(response):
+def get_team_scores(response: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """
     Extract team scores from the API response and return the entire response.
+
+    Args:
+        response (Dict[str, Any]): The API response.
+
+    Returns:
+        Optional[Dict[str, Any]]: The API response or None if extraction fails.
     """
     try:
         # Log the raw response for debugging
@@ -267,11 +301,7 @@ def get_team_scores(response):
         logging.error(f"Error extracting team scores: {e}")
         return None
 
-
-import json
-
-
-def get_previous_matches(team_id):
+def get_previous_matches(team_id: str) -> Optional[List[Dict[str, Any]]]:
     """
     Retrieve previous matches for a team from Redis.
 
@@ -279,9 +309,8 @@ def get_previous_matches(team_id):
         team_id (str): The ID of the team.
 
     Returns:
-        list: A list of previous matches for the specified team, or None if not found.
+        Optional[List[Dict[str, Any]]]: A list of previous matches or None if not found.
     """
-    # Use the correct Redis key format
     previous_matches_json = r.get(f"team_previous_matches:{team_id}")
 
     if previous_matches_json:
@@ -302,13 +331,16 @@ def get_previous_matches(team_id):
         print(f"No previous matches found for team ID {team_id}.")
         return None
 
-
-# getters.py
-def get_last_three_matches(team_id):
+def get_last_three_matches(team_id: str) -> List[str]:
     """
     Fetches the last 3 matches for a given team ID, with Redis caching.
+
+    Args:
+        team_id (str): The ID of the team.
+
+    Returns:
+        List[str]: A list of the last three matches.
     """
-    # Check if matches exist in the Redis database
     cached_matches = r.get(f'team_previous_matches:{team_id}')
 
     if cached_matches:
@@ -325,8 +357,16 @@ def get_last_three_matches(team_id):
         return []
 
 
-def format_last_three_matches(matches_data):
-    # Get the list of events (matches)
+def format_last_three_matches(matches_data: Dict[str, Any]) -> str:
+    """
+    Formats the last three matches from the API response.
+
+ Args:
+        matches_data (Dict[str, Any]): The API response.
+
+    Returns:
+        str: A formatted string containing the last three matches.
+    """
     events = matches_data.get('events', [])
 
     # Initialize an empty list to store formatted match information
@@ -352,15 +392,15 @@ def format_last_three_matches(matches_data):
     return "\n".join(formatted_matches)
 
 
-def get_next_three_matches(response):
+def get_next_three_matches(response: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
     Extract the next three matches from the API response.
 
     Args:
-        response (dict): The API response.
+        response (Dict[str, Any]): The API response.
 
     Returns:
-        list: A list of the next three matches.
+        List[Dict[str, Any]]: A list of the next three matches.
     """
     try:
         # Get the list of events (matches)
@@ -396,7 +436,16 @@ def get_next_three_matches(response):
         return []
 
 
-def get_next_match_info(upcoming_matches):
+def get_next_match_info(upcoming_matches: List[Dict[str, Any]]) -> Optional[Tuple[str, str, str]]:
+    """
+    Extracts the next match information from the upcoming matches.
+
+    Args:
+        upcoming_matches (List[Dict[str, Any]]): A list of upcoming matches.
+
+    Returns:
+        Optional[Tuple[str, str, str]]: A tuple containing the match ID, home team, and away team, or None if not found.
+    """
     if not upcoming_matches or not isinstance(upcoming_matches, list):
         return None
 
@@ -409,9 +458,16 @@ def get_next_match_info(upcoming_matches):
     return None
 
 
-def get_league_season_info(league_id, season_id):
+def get_league_season_info(league_id: str, season_id: str) -> Optional[Dict[str, Any]]:
     """
     Retrieves league season info from Redis.
+
+    Args:
+        league_id (str): The ID of the league.
+        season_id (str): The ID of the season.
+
+    Returns:
+        Optional[Dict[str, Any]]: League season info dictionary or None if not found.
     """
     key = f'league_season_info:{league_id}:{season_id}'
     info = r.get(key)

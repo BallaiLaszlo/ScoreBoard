@@ -1,71 +1,108 @@
 import logging
 import json
+from typing import Union, Dict, Any
 
 from getters import get_last_three_matches
 from redis_connection import r
 
 
-def store_league_info(league_id, league_info, last_fetched=0):
+def store_league_info(league_id: str, league_info: Union[Dict[str, Any], str], last_fetched: float = 0) -> None:
     """
-    Saves league information to the database.
+    Saves league information to the Redis database.
 
     Args:
-        league_id (str): The ID of the league.
-        league_info (dict): The league information to store.
-        last_fetched (float): The timestamp of when the league info was fetched.
+        league_id (str): The unique identifier of the league.
+        league_info (Union[Dict[str, Any], str]): The league information to store. Can be a dictionary or a JSON string.
+        last_fetched (float, optional): The timestamp of when the league info was fetched. Defaults to 0.
+
+    Returns:
+        None
+
+    Raises:
+        RedisError: If there's an error while storing data in Redis.
     """
-    # Convert league_info to JSON string if necessary
     if isinstance(league_info, dict):
         league_info = json.dumps(league_info)
     r.set(f"league_info:{league_id}", league_info)
     r.set(f"league_info_time:{league_id}", last_fetched)
 
 
-def store_standings(league_id, season_id, standings_data, last_fetched=0):
+def store_standings(league_id: str, season_id: str, standings_data: Dict[str, Any], last_fetched: float = 0) -> None:
     """
-    Stores the standings for a given league and season in the database.
+    Stores the standings for a given league and season in the Redis database.
 
     Args:
-        league_id (str): The ID of the league.
-        season_id (str): The ID of the season.
-        standings_data (dict): The standings data to store.
-        last_fetched (float): The last fetched time.
+        league_id (str): The unique identifier of the league.
+        season_id (str): The unique identifier of the season.
+        standings_data (Dict[str, Any]): The standings data to store.
+        last_fetched (float, optional): The timestamp of when the standings were last fetched. Defaults to 0.
+
+    Returns:
+        None
+
+    Raises:
+        RedisError: If there's an error while storing data in Redis.
     """
     r.set(f"standings:{league_id}:{season_id}", json.dumps(standings_data))
     r.set(f"standings_time:{league_id}:{season_id}", last_fetched)
     logging.info(f"Standings for league ID {league_id} and season ID {season_id} stored in the database.")
 
 
-def store_league_image(league_id, image_data):
+def store_league_image(league_id: str, image_data: Union[bytes, str]) -> None:
     """
-    Save league image in Redis.
+    Saves league image in Redis.
 
     Args:
-        league_id (str): The ID of the league.
-        image_data (bytes or str): The image data to store (can be binary data or a URL).
+        league_id (str): The unique identifier of the league.
+        image_data (Union[bytes, str]): The image data to store. Can be binary data or a URL.
+
+    Returns:
+        None
+
+    Raises:
+        RedisError: If there's an error while storing data in Redis.
     """
     image_key = f"league_image:{league_id}"
     r.set(image_key, image_data)
     logging.info(f"Stored image for league ID {league_id} in Redis.")
 
+    image_key = f"league_image:{league_id}"
+    r.set(image_key, image_data)
+    logging.info(f"Stored image for league ID {league_id} in Redis.")
 
-def store_league_seasons(league_id, seasons):
+
+def store_league_seasons(league_id: str, seasons: List[Dict[str, Any]]) -> None:
     """
     Store the seasons data in Redis with the key of the league ID.
+
+    Args:
+        league_id (str): The unique identifier of the league.
+        seasons (List[Dict[str, Any]]): A list of season dictionaries to store.
+
+    Returns:
+        None
+
+    Raises:
+        RedisError: If there's an error while storing data in Redis.
     """
     r.set(f"league:{league_id}:seasons", json.dumps(seasons))
 
 
-def store_team_info(team_id, team_info, last_fetched=0):
+def store_team_info(team_id: str, team_info: Union[Dict[str, Any], str], last_fetched: float = 0) -> None:
     """
-    Stores the team information in the database.
+    Stores the team information in the Redis database.
 
     Args:
-        team_id (str): The ID of the team.
-        team_info (dict): The team information to store.
-        last_fetched (float): The timestamp of when the team info was fetched.
+        team_id (str): The unique identifier of the team.
+        team_info (Union[Dict[str, Any], str]): The team information to store. Can be a dictionary or a JSON string.
+        last_fetched (float, optional): The timestamp of when the team info was fetched. Defaults to 0.
+
+    Returns:
+        None
+
+    Raises:
+        RedisError: If there's an error while storing data in Redis.
     """
-    # Convert team_info to JSON string if necessary
     if isinstance(team_info, dict):
         team_info = json.dumps(team_info)
 
@@ -75,13 +112,19 @@ def store_team_info(team_id, team_info, last_fetched=0):
     logging.info(f"Team info for ID {team_id} stored in the database.")
 
 
-def store_last_three_matches(team_id, formatted_matches):
+def store_last_three_matches(team_id: str, formatted_matches: str) -> None:
     """
     Stores the last three formatted matches for a given team ID in Redis.
 
     Args:
-        team_id (str): The ID of the team.
+        team_id (str): The unique identifier of the team.
         formatted_matches (str): The formatted match information to store.
+
+    Returns:
+        None
+
+    Raises:
+        RedisError: If there's an error while storing data in Redis.
     """
     if formatted_matches:
         logging.info(f"Storing matches for team ID {team_id}: {formatted_matches}")
@@ -91,13 +134,19 @@ def store_last_three_matches(team_id, formatted_matches):
         logging.warning(f"No matches to store for team ID {team_id}.")
 
 
-def store_next_three_matches(team_id, next_three_matches):
+def store_next_three_matches(team_id: str, next_three_matches: List[Dict[str, Any]]) -> None:
     """
     Stores the next three matches for a given team ID in Redis.
 
     Args:
-        team_id (str): The ID of the team.
-        next_three_matches (list): A list of dictionaries containing the next three matches.
+        team_id (str): The unique identifier of the team.
+        next_three_matches (List[Dict[str, Any]]): A list of dictionaries containing the next three matches.
+
+    Returns:
+        None
+
+    Raises:
+        RedisError: If there's an error while storing data in Redis.
     """
     if next_three_matches:
         logging.info(f"Storing matches for team ID {team_id}: {next_three_matches}")
@@ -116,21 +165,44 @@ def store_next_three_matches(team_id, next_three_matches):
     else:
         logging.warning(f"No matches to store for team ID {team_id}.")
 
-    def store_league_season_info(league_id, season_id, info):
-        """
-        Stores league season info in Redis.
-        """
-        if info:
-            key = f'league_season_info:{league_id}:{season_id}'
-            r.set(key, json.dumps(info))
-            logging.info(f"Stored league season info for league ID {league_id} and season ID {season_id} in Redis.")
-        else:
-            logging.warning(f"No league season info to store for league ID {league_id} and season ID {season_id}.")
 
-
-def store_league_season_info(league_id, season_id, info):
+def store_league_season_info(league_id: str, season_id: str, info: Dict[str, Any]) -> None:
     """
     Stores league season info in Redis.
+
+    Args:
+        league_id (str): The unique identifier of the league.
+        season_id (str): The unique identifier of the season.
+        info (Dict[str, Any]): The league season information to store.
+
+    Returns:
+        None
+
+    Raises:
+        RedisError: If there's an error while storing data in Redis.
+    """
+    if info:
+        key = f'league_season_info:{league_id}:{season_id}'
+        r.set(key, json.dumps(info))
+        logging.info(f"Stored league season info for league ID {league_id} and season ID {season_id} in Redis.")
+    else:
+        logging.warning(f"No league season info to store for league ID {league_id} and season ID {season_id}.")
+
+
+def store_league_season_info(league_id: str, season_id: str, info: Dict[str, Any]) -> None:
+    """
+    Stores league season info in Redis.
+
+    Args:
+        league_id (str): The unique identifier of the league.
+        season_id (str): The unique identifier of the season.
+        info (Dict[str, Any]): The league season information to store.
+
+    Returns:
+        None
+
+    Raises:
+        RedisError: If there's an error while storing data in Redis.
     """
     if info:
         key = f'league_season_info:{league_id}:{season_id}'

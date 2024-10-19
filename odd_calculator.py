@@ -3,7 +3,7 @@ import logging
 from tkinter import messagebox
 
 import numpy as np
-
+from typing import Dict, List, Optional, Tuple, Any
 from api_call import api_host, make_api_request
 from api_utils import fetch_previous_matches, fetch_and_store_upcoming_matches, fetch_standings, \
     fetch_and_store_match_details
@@ -17,7 +17,16 @@ logging.basicConfig(
 )
 
 
-def fetch_match_odds(match_id):
+def fetch_match_odds(match_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Fetches match odds from the API for a given match ID.
+
+    Args:
+        match_id (str): The ID of the match.
+
+    Returns:
+        Optional[Dict[str, Any]]: The match odds data if successful, None otherwise.
+    """
     url = f"https://{api_host}/api/match/{match_id}/odds"
     response = make_api_request(url)
 
@@ -29,7 +38,14 @@ def fetch_match_odds(match_id):
         return None
 
 
-def store_match_odds(match_id, match_odds):
+def store_match_odds(match_id: str, match_odds: Dict[str, Any]) -> None:
+    """
+    Stores match odds in Redis for a given match ID.
+
+    Args:
+        match_id (str): The ID of the match.
+        match_odds (Dict[str, Any]): The match odds data to store.
+    """
     if match_odds:
         logging.info(f"Storing match odds for match ID {match_id}: {match_odds}")
         r.set(f'match_odds:{match_id}', json.dumps(match_odds))
@@ -38,7 +54,16 @@ def store_match_odds(match_id, match_odds):
         logging.warning(f"No match odds to store for match ID {match_id}.")
 
 
-def get_match_odds(match_id):
+def get_match_odds(match_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves match odds from Redis or fetches from API if not available.
+
+    Args:
+        match_id (str): The ID of the match.
+
+    Returns:
+        Optional[Dict[str, Any]]: The match odds data if available, None otherwise.
+    """
     match_odds = r.get(f'match_odds:{match_id}')
 
     if match_odds:
@@ -57,7 +82,16 @@ def get_match_odds(match_id):
         return match_odds
 
 
-def get_match_odds_1x2(match_id):
+def get_match_odds_1x2(match_id: str) -> Optional[Dict[str, Dict[str, str]]]:
+    """
+    Retrieves 1X2 match odds for a given match ID.
+
+    Args:
+        match_id (str): The ID of the match.
+
+    Returns:
+        Optional[Dict[str, Dict[str, str]]]: The 1X2 odds data if available, None otherwise.
+    """
     match_odds = get_match_odds(match_id)
 
     if match_odds:
@@ -80,7 +114,16 @@ def get_match_odds_1x2(match_id):
     return None
 
 
-def get_match_prediction_info(match_details):
+def get_match_prediction_info(match_details: Dict[str, Any]) -> Optional[Dict[str, str]]:
+    """
+    Extracts prediction information from match details.
+
+    Args:
+        match_details (Dict[str, Any]): The match details.
+
+    Returns:
+        Optional[Dict[str, str]]: A dictionary containing prediction info if successful, None otherwise.
+    """
     logging.info("Extracting prediction info from match details.")
 
     try:
@@ -109,7 +152,16 @@ def get_match_prediction_info(match_details):
         return None
 
 
-def calculate_percentage(odds):
+def calculate_percentage(odds: Dict[str, Dict[str, str]]) -> Dict[str, float]:
+    """
+    Calculates percentage probabilities from fractional odds.
+
+    Args:
+        odds (Dict[str, Dict[str, str]]): The odds data.
+
+    Returns:
+        Dict[str, float]: A dictionary of calculated percentages.
+    """
     probabilities = {}
 
     for outcome, values in odds.items():
@@ -126,7 +178,16 @@ def calculate_percentage(odds):
     return percentages
 
 
-def parse_upcoming_matches(upcoming_match_dict):
+def parse_upcoming_matches(upcoming_match_dict: str) -> List[Dict[str, Any]]:
+    """
+    Parses upcoming matches from a string representation.
+
+    Args:
+        upcoming_match_dict (str): A string containing upcoming match information.
+
+    Returns:
+        List[Dict[str, Any]]: A list of parsed match dictionaries.
+    """
     matches = upcoming_match_dict.split('\n\n')
     parsed_matches = []
     for match in matches:
@@ -141,14 +202,35 @@ def parse_upcoming_matches(upcoming_match_dict):
     return parsed_matches
 
 
-def get_team_position(standings, team_id):
+def get_team_position(standings: Dict[str, Any], team_id: str) -> int:
+    """
+    Retrieves a team's position from standings data.
+
+    Args:
+        standings (Dict[str, Any]): The standings' data.
+        team_id (str): The ID of the team.
+
+    Returns:
+        int: The team's position in the standings.
+    """
+
     for row in standings['standings'][0]['rows']:
         if row['team']['id'] == team_id:
             return row['position']
     return 0
 
 
-def get_league_info(tournament_id, season_id):
+def get_league_info(tournament_id: str, season_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves league information for a given tournament and season.
+
+    Args:
+        tournament_id (str): The ID of the tournament.
+        season_id (str): The ID of the season.
+
+    Returns:
+        Optional[Dict[str, Any]]: League information if available, None otherwise.
+    """
     url = f"https://{api_host}/api/tournament/{tournament_id}/season/{season_id}/info"
     league_info = make_api_request(url)
     if league_info and 'info' in league_info:
@@ -156,9 +238,15 @@ def get_league_info(tournament_id, season_id):
     return None
 
 
-def predict_match(match_id):
+def predict_match(match_id: str) -> str:
     """
-    Predicts the match score based on form, odds, league standing, recent goals, and league information.
+    Predicts the outcome of a match based on various factors.
+
+    Args:
+        match_id (str): The ID of the match to predict.
+
+    Returns:
+        str: A message containing the prediction results.
     """
     match_details = fetch_and_store_match_details(match_id)
     if not match_details:
@@ -196,7 +284,16 @@ def predict_match(match_id):
     return prediction_message
 
 
-def get_match_prediction_info(match_details):
+def get_match_prediction_info(match_details: Dict[str, Any]) -> Dict[str, str]:
+    """
+    Extracts relevant prediction information from match details.
+
+    Args:
+        match_details (Dict[str, Any]): The match details.
+
+    Returns:
+        Dict[str, str]: A dictionary containing extracted prediction information.
+    """
     event = match_details.get('event', {})
     tournament = event.get('tournament', {})
     return {
@@ -209,12 +306,35 @@ def get_match_prediction_info(match_details):
     }
 
 
-def extract_team_and_tournament_info(prediction_info):
+def extract_team_and_tournament_info(prediction_info: Dict[str, str]) -> Tuple[str, str, str, str]:
+    """
+    Extracts team and tournament information from prediction data.
+
+    Args:
+        prediction_info (Dict[str, str]): The prediction data.
+
+    Returns:
+        Tuple[str, str, str, str]: A tuple containing team and tournament IDs.
+    """
     return (prediction_info['home_team_id'], prediction_info['away_team_id'],
             prediction_info['tournament_id'], prediction_info['season_id'])
 
 
-def get_team_data(team_id, match_id, standings, league_info, is_home):
+def get_team_data(team_id: str, match_id: str, standings: Dict[str, Any], league_info: Dict[str, Any], is_home: bool) -> \
+Dict[str, Any]:
+    """
+    Retrieves team data for prediction purposes.
+
+    Args:
+        team_id (str): The ID of the team.
+        match_id (str): The ID of the match.
+        standings (Dict[str, Any]): The standings data.
+        league_info (Dict[str, Any]): The league information.
+        is_home (bool): Whether the team is playing at home.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing team data.
+    """
     last_matches = get_last_three_matches(team_id)
     form, goals = calculate_form_and_goals(last_matches)
     odds = get_match_odds_1x2(match_id).get('Home' if is_home else 'Away', {'fractional_value': '1/1'})[
@@ -234,7 +354,22 @@ def get_team_data(team_id, match_id, standings, league_info, is_home):
     }
 
 
-def calculate_prediction_factor(form, odds, position, goals, league_info, is_home):
+def calculate_prediction_factor(form: int, odds: float, position: int, goals: int, league_info: Dict[str, Any],
+                                is_home: bool) -> float:
+    """
+    Calculates a prediction factor based on team performance and odds.
+
+    Args:
+        form (int): The team's form.
+        odds (float): The team's odds.
+        position (int): The team's position in the standings.
+        goals (int): The team's goals.
+        league_info (Dict[str, Any]): The league information.
+        is_home (bool): Whether the team is playing at home.
+
+    Returns:
+        float: The calculated prediction factor.
+    """
     form_factor = min(form / 9, 1)
     odds_factor = 1 / (odds + 1)
     position_factor = (20 - min(position, 20)) / 20
@@ -249,19 +384,53 @@ def calculate_prediction_factor(form, odds, position, goals, league_info, is_hom
             home_advantage_factor * 0.1)
 
 
-def calculate_expected_goals(home_factor, away_factor, league_info):
+def calculate_expected_goals(home_factor: float, away_factor: float, league_info: Dict[str, Any]) -> Tuple[
+    float, float]:
+    """
+    Calculates expected goals for a match based on team performance and league information.
+
+    Args:
+        home_factor (float): The home team's prediction factor.
+        away_factor (float): The away team's prediction factor.
+        league_info (Dict[str, Any]): The league information.
+
+    Returns:
+        Tuple[float, float]: A tuple containing expected goals for both teams.
+    """
     league_avg_goals = league_info.get('goals', 0) / (
             league_info.get('homeTeamWins', 0) + league_info.get('awayTeamWins', 0) + league_info.get('draws', 0))
     return league_avg_goals * (1 + home_factor - away_factor) * 1.1, league_avg_goals * (1 + away_factor - home_factor)
 
 
-def simulate_multiple_matches(home_expected_goals, away_expected_goals, num_simulations):
+def simulate_multiple_matches(home_expected_goals: float, away_expected_goals: float, num_simulations: int) -> Tuple[
+    np.ndarray, np.ndarray]:
+    """
+    Simulates multiple matches to estimate win probabilities.
+
+    Args:
+        home_expected_goals (float): The home team's expected goals.
+        away_expected_goals (float): The away team's expected goals.
+        num_simulations (int): The number of simulations to run.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: A tuple containing simulated scores for both teams.
+    """
     home_scores = np.random.poisson(home_expected_goals, num_simulations)
     away_scores = np.random.poisson(away_expected_goals, num_simulations)
     return home_scores, away_scores
 
 
-def calculate_form_and_goals(matches):
+def calculate_form_and_goals(matches: List[str]) -> Tuple[int, int]:
+    """
+    Calculates a team's form and goals from a list of matches.
+
+    Args:
+        matches (List[str]): A list of match strings.
+
+    Returns:
+        Tuple[int, int]: A tuple containing the team's form and goals.
+    """
+
     form = 0
     goals = 0
     for match in matches:
@@ -279,7 +448,16 @@ def calculate_form_and_goals(matches):
     return form, goals
 
 
-def calculate_decimal_odds(fractional_odds):
+def calculate_decimal_odds(fractional_odds: str) -> float:
+    """
+    Converts fractional odds to decimal odds.
+
+    Args:
+        fractional_odds (str): The fractional odds.
+
+    Returns:
+        float: The decimal odds.
+    """
     try:
         numerator, denominator = map(int, fractional_odds.split('/'))
         return 1 + (numerator / denominator)  # Return decimal odds
@@ -288,8 +466,22 @@ def calculate_decimal_odds(fractional_odds):
         return 2.0  # Default to even odds if parsing fails
 
 
-def generate_prediction_message(home_team_name, away_team_name, home_scores, away_scores, home_expected_goals,
-                                away_expected_goals):
+def generate_prediction_message(home_team_name: str, away_team_name: str, home_scores: np.ndarray,
+                                away_scores: np.ndarray, home_expected_goals: float, away_expected_goals: float) -> str:
+    """
+    Generates a prediction message based on simulated match results.
+
+    Args:
+        home_team_name (str): The name of the home team.
+        away_team_name (str): The name of the away team.
+        home_scores (np.ndarray): The simulated scores for the home team.
+        away_scores (np.ndarray): The simulated scores for the away team.
+        home_expected_goals (float): The home team's expected goals.
+        away_expected_goals (float): The away team's expected goals.
+
+    Returns:
+        str: A message containing the prediction results.
+    """
     avg_home_score = np.mean(home_scores)
     avg_away_score = np.mean(away_scores)
     home_wins = sum(1 for h, a in zip(home_scores, away_scores) if h > a)

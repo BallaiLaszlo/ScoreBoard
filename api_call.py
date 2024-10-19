@@ -16,15 +16,21 @@ api_key = settings["api_key"]
 api_host = "footapi7.p.rapidapi.com"
 
 
-def make_api_request(url):
+def make_api_request(url: str) -> Optional[Union[Dict[str, Any], bytes]]:
     """
     General request handler to make API calls.
+
+    This function sends a GET request to the specified URL with the required headers.
+    It handles responses, checks for errors, and parses JSON if applicable.
 
     Args:
         url (str): The API endpoint to call.
 
     Returns:
-        dict or bytes: The JSON response if the content type is JSON, otherwise raw content.
+        Optional[Union[Dict[str, Any], bytes]]:
+            - The JSON response as a dictionary if the content type is JSON,
+            - Raw content as bytes if the content type is not JSON,
+            - None if an error occurs during the request or parsing.
     """
     headers = {
         'x-rapidapi-key': api_key,

@@ -13,10 +13,22 @@ logging.basicConfig(
 )
 
 
-def initialize_leagues():
+def initialize_leagues() -> None:
     """
     Initializes the leagues from settings.json, checks if they are in the database,
     and if not, fetches the league info, standings, and league image, then stores them.
+
+    This function performs the following steps for each league:
+    1. Checks and fetches league info if not in the database.
+    2. Checks and fetches league seasons if not in the database.
+    3. Fetches standings for the latest season if not in the database.
+    4. Checks and fetches league image if not in the database.
+
+    If any step fails for a league, it logs the error and continues with the next league.
+
+    Raises:
+        FileNotFoundError: If settings.json file is not found.
+        json.JSONDecodeError: If there's an error parsing settings.json.
     """
     logging.info("Initializing leagues from settings.json")
 

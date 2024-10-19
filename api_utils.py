@@ -1,5 +1,7 @@
 import logging
 import json
+from typing import Optional, Dict, Any, List
+
 from api_call import *
 from getters import get_league_info_from_db, get_standings, get_league_image_from_db, get_team_info, \
     get_previous_matches, format_last_three_matches, get_next_three_matches, get_league_season_info
@@ -13,7 +15,7 @@ logging.basicConfig(
 )
 
 
-def fetch_league_info(league_id):
+def fetch_league_info(league_id: str) -> Optional[Dict[str, Any]]:
     """
     Fetches league information based on league ID.
 
@@ -21,7 +23,7 @@ def fetch_league_info(league_id):
         league_id (str): The ID of the league.
 
     Returns:
-        dict: The league information.
+        Optional[Dict[str, Any]]: The league information if found, None otherwise.
     """
     league_info = get_league_info_from_db(league_id)
 
@@ -41,7 +43,7 @@ def fetch_league_info(league_id):
     return league_info
 
 
-def fetch_standings(league_id, season_id):
+def fetch_standings(league_id: str, season_id: str) -> Optional[Dict[str, Any]]:
     """
     Fetches league standings based on league ID and season ID.
     First checks the database for cached standings.
@@ -51,7 +53,7 @@ def fetch_standings(league_id, season_id):
         season_id (str): The ID of the season.
 
     Returns:
-        dict: The standings information.
+        Optional[Dict[str, Any]]: The standings information if found, None otherwise.
     """
     standings_data = get_standings(league_id, season_id)
     if standings_data:
@@ -73,9 +75,15 @@ def fetch_standings(league_id, season_id):
     return standings_data
 
 
-def fetch_league_image(league_id):
+def fetch_league_image(league_id: str) -> Optional[bytes]:
     """
     Fetches the league image based on league ID, with Redis caching.
+
+    Args:
+        league_id (str): The ID of the league.
+
+    Returns:
+        Optional[bytes]: The image data if found, None otherwise.
     """
     image_data = get_league_image_from_db(league_id)
     if image_data:
@@ -94,7 +102,7 @@ def fetch_league_image(league_id):
     return image_data
 
 
-def fetch_league_seasons(league_id):
+def fetch_league_seasons(league_id: str) -> List[Dict[str, Any]]:
     """
     Fetches league seasons based on league ID.
 
@@ -102,7 +110,7 @@ def fetch_league_seasons(league_id):
         league_id (str): The ID of the league.
 
     Returns:
-        list: A list of seasons for the specified league.
+        List[Dict[str, Any]]: A list of seasons for the specified league.
     """
     logging.info(f"Fetching seasons data for league ID {league_id} from API.")
     url = f"https://{api_host}/api/tournament/{league_id}/seasons"
@@ -121,7 +129,7 @@ def fetch_league_seasons(league_id):
     return []
 
 
-def fetch_team_info(team_id):
+def fetch_team_info(team_id: str) -> Optional[Dict[str, Any]]:
     """
     Fetches team information based on team ID.
 
@@ -129,7 +137,7 @@ def fetch_team_info(team_id):
         team_id (str): The ID of the team.
 
     Returns:
-        dict: The team information.
+        Optional[Dict[str, Any]]: The team information if found, None otherwise.
     """
     team_info = get_team_info(team_id)  # Check if info exists in the database
 
@@ -149,11 +157,16 @@ def fetch_team_info(team_id):
     return team_info
 
 
-def fetch_previous_matches(team_id):
+def fetch_previous_matches(team_id: str) -> Optional[List[Dict[str, Any]]]:
     """
     Fetches previous matches for a team based on team ID, with Redis caching.
+
+    Args:
+        team_id (str): The ID of the team.
+
+    Returns:
+        Optional[List[Dict[str, Any]]]: A list of previous matches if found, None otherwise.
     """
-    # Check if matches exist in the Redis database
     cached_matches = r.get(f'team_previous_matches:{team_id}')
 
     if cached_matches:
@@ -179,7 +192,7 @@ def fetch_previous_matches(team_id):
     return previous_matches  # Return the fetched matches
 
 
-def fetch_and_store_upcoming_matches(team_id):
+def fetch_and_store_upcoming_matches(team_id: str) -> List[Dict[str, Any]]:
     """
     Fetches upcoming matches for a team and stores them in Redis.
 
@@ -187,7 +200,7 @@ def fetch_and_store_upcoming_matches(team_id):
         team_id (str): The ID of the team.
 
     Returns:
-        list: A list of the next three matches.
+        List[Dict[str, Any]]: A list of the next three matches.
     """
     logging.info(f"Fetching upcoming matches for team ID {team_id}")
     try:
@@ -231,7 +244,7 @@ def fetch_and_store_upcoming_matches(team_id):
         return []
 
 
-def fetch_and_store_match_details(match_id):
+def fetch_and_store_match_details(match_id: str) -> Optional[Dict[str, Any]]:
     """
     Fetches match details from the API and stores them in Redis.
 
@@ -239,7 +252,7 @@ def fetch_and_store_match_details(match_id):
         match_id (str): The ID of the match.
 
     Returns:
-        dict: The match details if successful, None otherwise.
+        Optional[Dict[str, Any]]: The match details if successful, None otherwise.
     """
     logging.info(f"Fetching match details for match ID: {match_id}")
 
@@ -267,9 +280,16 @@ def fetch_and_store_match_details(match_id):
         return None
 
 
-def fetch_and_store_league_season_info(league_id, season_id):
+def fetch_and_store_league_season_info(league_id: str, season_id: str) -> Optional[Dict[str, Any]]:
     """
     Fetches league season info from API, stores it in Redis, and returns the info.
+
+    Args:
+        league_id (str): The ID of the league.
+        season_id (str): The ID of the season.
+
+    Returns:
+        Optional[Dict[str, Any]]: The league season info if successful, None otherwise.
     """
     logging.info(f"Fetching league season info for league ID {league_id} and season ID {season_id}")
 
