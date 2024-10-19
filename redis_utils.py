@@ -1,6 +1,6 @@
 import logging
 import json
-from typing import Union, Dict, Any
+from typing import Union, Dict, Any, List
 
 from getters import get_last_three_matches
 from redis_connection import r
