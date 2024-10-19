@@ -1,6 +1,6 @@
-
 import tkinter as tk
 from tkinter import font, messagebox
+import tkinter.font as tkfont
 from PIL import Image, ImageTk
 import io
 from api_utils import *
@@ -18,6 +18,8 @@ from datetime import datetime, timedelta, date
 
 setup_logger()
 initialize_leagues()
+
+
 class FootballApp:
     def __init__(self, root):
         self.root = root
@@ -36,12 +38,14 @@ class FootballApp:
         self.selectors_frame.pack(pady=20, fill=tk.X)
 
         # League selector
-        self.league_label = tk.Label(self.selectors_frame, text="Select League:", font=self.custom_font, bg="#e0f7fa", fg="#00796b")
+        self.league_label = tk.Label(self.selectors_frame, text="Select League:", font=self.custom_font, bg="#e0f7fa",
+                                     fg="#00796b")
         self.league_label.grid(row=0, column=0, padx=10, pady=5, sticky=tk.E)
 
         self.league_combobox = tk.ttk.Combobox(self.selectors_frame,
-            values=[f"{league_id}: {league_name}" for league_id, league_name in get_league_name_list()],
-            font=self.custom_font, width=25)
+                                               values=[f"{league_id}: {league_name}" for league_id, league_name in
+                                                       get_league_name_list()],
+                                               font=self.custom_font, width=25)
         self.league_combobox.bind("<<ComboboxSelected>>", self.update_league_info)
         self.league_combobox.grid(row=0, column=1, padx=10, pady=5, sticky=tk.W)
 
@@ -50,7 +54,8 @@ class FootballApp:
         self.league_info_frame.pack(pady=20, fill=tk.X)
 
         # League info label
-        self.league_info_label = tk.Label(self.league_info_frame, text="", font=self.custom_font, bg="#ffffff", justify=tk.LEFT, anchor="w")
+        self.league_info_label = tk.Label(self.league_info_frame, text="", font=self.custom_font, bg="#ffffff",
+                                          justify=tk.LEFT, anchor="w")
         self.league_info_label.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # League icon label
@@ -71,7 +76,8 @@ class FootballApp:
 
         # Configure the canvas to work with the scrollbar
         self.standings_canvas.configure(yscrollcommand=self.scrollbar.set)
-        self.standings_canvas.bind('<Configure>', lambda e: self.standings_canvas.configure(scrollregion=self.standings_canvas.bbox("all")))
+        self.standings_canvas.bind('<Configure>', lambda e: self.standings_canvas.configure(
+            scrollregion=self.standings_canvas.bbox("all")))
 
         # Add a frame inside the canvas to hold the standings content
         self.standings_content_frame = tk.Frame(self.standings_canvas, bg="#f2f2f2")
@@ -246,6 +252,7 @@ class FootballApp:
             if col_index != 1 and col_index != 2:  # Skip the team button column
                 label = tk.Label(self.matches_label, text=data, bg="#f2f2f2", font=self.custom_font)
                 label.grid(row=row_index, column=col_index, padx=5, pady=5)
+
     def create_standing_button(self, value, row_index, column, command=None):
         """
         Creates a button for standing values.
@@ -301,12 +308,50 @@ class FootballApp:
             messagebox.showerror("Error", f"Failed to fetch last matches for team ID {team_id}. Please try again.")
 
     def display_last_matches(self, last_matches, window):
+        # Create a custom font
+        custom_font = tkfont.Font(family="Helvetica", size=14, weight="bold")
+
         # Format matches for display
         formatted_matches = '\n\n'.join(last_matches)
 
-        # Display formatted matches
-        matches_label = tk.Label(window, text=formatted_matches, padx=20, pady=20)
+        # Create a frame to hold the label (for scrolling if needed)
+        frame = tk.Frame(window)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        # Create a canvas
+        canvas = tk.Canvas(frame)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Add a scrollbar to the canvas
+        scrollbar = tk.Scrollbar(frame, orient=tk.VERTICAL, command=canvas.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Configure the canvas
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+
+        # Create another frame inside the canvas
+        inner_frame = tk.Frame(canvas)
+
+        # Add that frame to a window in the canvas
+        canvas.create_window((0, 0), window=inner_frame, anchor="nw")
+
+        # Display formatted matches with the custom font
+        matches_label = tk.Label(inner_frame, text=formatted_matches, font=custom_font,
+                                 padx=20, pady=20, justify=tk.LEFT, wraplength=380)
         matches_label.pack()
+
+        # Update the geometry
+        window.update_idletasks()
+        window.geometry('450x500')  # Adjust size as needed
+
+        # Center the window on the screen
+        window.update_idletasks()
+        width = window.winfo_width()
+        height = window.winfo_height()
+        x = (window.winfo_screenwidth() // 2) - (width // 2)
+        y = (window.winfo_screenheight() // 2) - (height // 2)
+        window.geometry('{}x{}+{}+{}'.format(width, height, x, y))
 
     def fetch_and_display_next_matches(self, team_id):
         """
@@ -314,51 +359,91 @@ class FootballApp:
         """
         next_matches = fetch_and_store_upcoming_matches(team_id)
 
+        # Create a new window for displaying upcoming matches
         matches_window = tk.Toplevel(self.matches_label)
         matches_window.title("Next Three Matches")
         matches_window.geometry("400x700")
 
         if next_matches:
             for match in next_matches:
-                match_frame = tk.Frame(matches_window, bg="#f2f2f2", relief=tk.RAISED, borderwidth=2)
-                match_frame.pack(padx=10, pady=10, fill=tk.X)
-
-                match_text = f"{match['tournament_name']}\n{match['home_team']} vs {match['away_team']}\n{match['status']}"
-                match_label = tk.Label(match_frame, text=match_text, bg="#f2f2f2", font=self.custom_font,
-                                       justify=tk.LEFT)
-                match_label.pack(padx=5, pady=5)
-
-                odds_1x2 = get_match_odds_1x2(match['match_id'])
-                if odds_1x2:
-                    percentages = calculate_percentage(odds_1x2)
-                    odds_text = "Win Probabilities:\n" + "\n".join(
-                        [f"{name}: {percentage:.2f}%" for name, percentage in percentages.items()])
-                    odds_label = tk.Label(match_frame, text=odds_text, bg="#f2f2f2", font=self.custom_font,
-                                          justify=tk.LEFT)
-                    odds_label.pack(padx=5, pady=5)
-
-                    predict_button = tk.Button(match_frame, text="Predict Match",
-                                               command=lambda m=match, o=odds_1x2: self.predict_match(m, o),
-                                               bg="#00796b", fg="white")
-                    predict_button.pack(pady=5)
-                else:
-                    odds_label = tk.Label(match_frame, text="Odds not available", bg="#f2f2f2", font=self.custom_font)
-                    odds_label.pack(padx=5, pady=5)
-
+                self.create_match_frame(matches_window, match)
         else:
-            no_matches_label = tk.Label(matches_window, text="No upcoming matches found. ", bg="#f2f2f2",
+            no_matches_label = tk.Label(matches_window, text="No upcoming matches found.", bg="#f2f2f2",
                                         font=self.custom_font)
             no_matches_label.pack(padx=10, pady=10)
 
         close_button = tk.Button(matches_window, text="Close", command=matches_window.destroy, bg="#d32f2f", fg="white")
         close_button.pack(pady=10)
 
-    def predict_match(self, match, odds):
+    def create_match_frame(self, parent_window, match):
+        """
+        Creates a frame to display a match's details including tournament, teams, odds, and a predict button.
+        """
+        match_frame = tk.Frame(parent_window, bg="#f2f2f2", relief=tk.RAISED, borderwidth=2)
+        match_frame.pack(padx=10, pady=10, fill=tk.X)
+
+        match_text = f"{match['tournament_name']}\n{match['home_team']} vs {match['away_team']}\n{match['status']}"
+        match_label = tk.Label(match_frame, text=match_text, bg="#f2f2f2", font=self.custom_font, justify=tk.LEFT)
+        match_label.pack(padx=5, pady=5)
+
+        odds_1x2 = get_match_odds_1x2(match['match_id'])
+        if odds_1x2:
+            percentages = calculate_percentage(odds_1x2)
+            odds_text = "Win Probabilities:\n" + "\n".join(
+                [f"{name}: {percentage:.2f}%" for name, percentage in percentages.items()])
+            odds_label = tk.Label(match_frame, text=odds_text, bg="#f2f2f2", font=self.custom_font, justify=tk.LEFT)
+            odds_label.pack(padx=5, pady=5)
+
+            # Predict button
+            predict_button = tk.Button(match_frame, text="Predict Match", command=lambda m=match: self.predict_match(m),
+                                       bg="#00796b", fg="white")
+            predict_button.pack(pady=5)
+        else:
+            odds_label = tk.Label(match_frame, text="Odds not available", bg="#f2f2f2", font=self.custom_font)
+            odds_label.pack(padx=5, pady=5)
+
+    def predict_match(self, match):
+        """
+        Predicts the match score for the given match details.
+        """
         league_id = self.league_combobox.get().split(":")[0].strip()
         season_id = get_first_season_id(league_id)
         home_team_id = match['home_team_id']
         away_team_id = match['away_team_id']
         match_id = match['match_id']
 
-        prediction = predict_match(league_id, season_id, home_team_id)
-        messagebox.showinfo("Match Prediction", prediction)
+        # Call the predict_match function with relevant IDs
+        prediction = predict_match(match_id)
+
+        # Create and show a custom message dialog
+        self.show_custom_message("Match Prediction", prediction)
+
+    def show_custom_message(self, title, message):
+        # Create a new toplevel window
+        dialog = tk.Toplevel(self.root)
+        dialog.title(title)
+        dialog.geometry("500x400")
+        dialog.transient(self.root)  # Make it modal
+        dialog.grab_set()
+
+        # Create a custom font
+        custom_font = tkfont.Font(family="Helvetica", size=14, weight="bold")
+
+        # Create and pack a label with the message
+        msg_label = tk.Label(dialog, text=message, font=custom_font, wraplength=380, justify="center")
+        msg_label.pack(expand=True, fill="both", padx=20, pady=20)
+
+        # Create and pack an OK button
+        ok_button = tk.Button(dialog, text="OK", command=dialog.destroy)
+        ok_button.pack(pady=10)
+
+        # Center the window on the screen
+        dialog.update_idletasks()
+        width = dialog.winfo_width()
+        height = dialog.winfo_height()
+        x = (dialog.winfo_screenwidth() // 2) - (width // 2)
+        y = (dialog.winfo_screenheight() // 2) - (height // 2)
+        dialog.geometry('{}x{}+{}+{}'.format(width, height, x, y))
+
+        # Wait for the dialog to be closed
+        self.root.wait_window(dialog)

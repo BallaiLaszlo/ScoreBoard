@@ -9,7 +9,6 @@ from getters import get_team_info, get_last_three_matches, format_last_three_mat
 import time
 
 
-
 def show_team_info(team_id):
     """
     Fetches and displays team information. Checks Redis database first,
@@ -101,19 +100,23 @@ def display_team_info(team_info, team_window):
     # Create labels to display team info with specified formatting
     label_font = ("Helvetica", 16, "bold")  # Larger font size and bold
 
-    team_name_label = tk.Label(team_window, text=f"Team Name: {team_name}", font=label_font, bg=primary_color, fg=text_color)
+    team_name_label = tk.Label(team_window, text=f"Team Name: {team_name}", font=label_font, bg=primary_color,
+                               fg=text_color)
     team_name_label.pack(pady=10)
 
-    manager_label = tk.Label(team_window, text=f"Manager: {manager_name}", font=label_font, bg=primary_color, fg=text_color)
+    manager_label = tk.Label(team_window, text=f"Manager: {manager_name}", font=label_font, bg=primary_color,
+                             fg=text_color)
     manager_label.pack(pady=10)
 
     venue_label = tk.Label(team_window, text=f"Venue: {venue}", font=label_font, bg=primary_color, fg=text_color)
     venue_label.pack(pady=10)
 
-    venue_capacity_label = tk.Label(team_window, text=f"Venue Capacity: {venue_capacity}", font=label_font, bg=primary_color, fg=text_color)
+    venue_capacity_label = tk.Label(team_window, text=f"Venue Capacity: {venue_capacity}", font=label_font,
+                                    bg=primary_color, fg=text_color)
     venue_capacity_label.pack(pady=10)
 
-    location_label = tk.Label(team_window, text=f"Location: {location}", font=label_font, bg=primary_color, fg=text_color)
+    location_label = tk.Label(team_window, text=f"Location: {location}", font=label_font, bg=primary_color,
+                              fg=text_color)
     location_label.pack(pady=10)
 
     country_label = tk.Label(team_window, text=f"Country: {country}", font=label_font, bg=primary_color, fg=text_color)
@@ -122,5 +125,3 @@ def display_team_info(team_info, team_window):
     # Close button
     close_button = tk.Button(team_window, text="Close", command=team_window.destroy, bg=secondary_color, fg='black')
     close_button.pack(pady=10)
-
-

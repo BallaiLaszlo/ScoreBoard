@@ -2,6 +2,8 @@ import json
 import logging
 from tkinter import messagebox
 
+import numpy as np
+
 from api_call import api_host, make_api_request
 from api_utils import fetch_previous_matches, fetch_and_store_upcoming_matches, fetch_standings, \
     fetch_and_store_match_details
@@ -9,22 +11,13 @@ from getters import get_team_info, get_last_three_matches, get_first_season_id
 from redis_connection import r
 
 logging.basicConfig(
-    filename='log.txt',  # Log file name
-    level=logging.INFO,  # Log level
-    format='%(asctime)s - %(levelname)s - %(message)s'  # Log message format
+    filename='log.txt',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
 
 def fetch_match_odds(match_id):
-    """
-    Fetches the match odds for a given match ID.
-
-    Args:
-        match_id (str): The ID of the match.
-
-    Returns:
-        dict: The match odds.
-    """
     url = f"https://{api_host}/api/match/{match_id}/odds"
     response = make_api_request(url)
 
@@ -37,13 +30,6 @@ def fetch_match_odds(match_id):
 
 
 def store_match_odds(match_id, match_odds):
-    """
-    Stores the match odds for a given match ID in Redis.
-
-    Args:
-        match_id (str): The ID of the match.
-        match_odds (dict): The match odds.
-    """
     if match_odds:
         logging.info(f"Storing match odds for match ID {match_id}: {match_odds}")
         r.set(f'match_odds:{match_id}', json.dumps(match_odds))
@@ -53,15 +39,6 @@ def store_match_odds(match_id, match_odds):
 
 
 def get_match_odds(match_id):
-    """
-    Retrieves the match odds for a given match ID from Redis.
-
-    Args:
-        match_id (str): The ID of the match.
-
-    Returns:
-        dict: The match odds.
-    """
     match_odds = r.get(f'match_odds:{match_id}')
 
     if match_odds:
@@ -81,15 +58,6 @@ def get_match_odds(match_id):
 
 
 def get_match_odds_1x2(match_id):
-    """
-    Retrieves the 1x2 odds and their corresponding changes for a given match ID.
-
-    Args:
-        match_id (str): The ID of the match.
-
-    Returns:
-        dict: A dictionary containing the 1x2 odds and their corresponding changes.
-    """
     match_odds = get_match_odds(match_id)
 
     if match_odds:
@@ -111,21 +79,11 @@ def get_match_odds_1x2(match_id):
 
     return None
 
+
 def get_match_prediction_info(match_details):
-    """
-    Retrieves all necessary information for match prediction.
-
-    Args:
-        match_details (dict): The match details dictionary.
-
-    Returns:
-        dict: A dictionary containing tournament_id, season_id, home_team_id, away_team_id, and match_id.
-              Returns None if any information is missing.
-    """
     logging.info("Extracting prediction info from match details.")
 
     try:
-        # Extract required information
         event = match_details.get('event', {})
         tournament = event.get('tournament', {})
         tournament_id = tournament.get('uniqueTournament', {}).get('id')
@@ -142,7 +100,7 @@ def get_match_prediction_info(match_details):
             'tournament_id': tournament_id,
             'season_id': season_id,
             'home_team_id': home_team_id,
-            'away_team_id': away_team_id,
+            'away_team_id': away_team_id,  # Fixed the typo here
             'match_id': match_id
         }
 
@@ -150,38 +108,23 @@ def get_match_prediction_info(match_details):
         logging.error(f"Error in get_match_prediction_info: {str(e)}")
         return None
 
+
 def calculate_percentage(odds):
-    """
-    Calculates the percentage from the given odds.
-
-    Args:
-        odds (dict): A dictionary containing the odds.
-
-    Returns:
-        dict: A dictionary where each key is a possible outcome and each value is the corresponding percentage.
-    """
-    # Initialize an empty dictionary to store the probabilities
     probabilities = {}
 
-    # Calculate the implied probability for each outcome
     for outcome, values in odds.items():
-        # Split the fractional value into numerator and denominator
         numerator, denominator = map(int, values['fractional_value'].split('/'))
-
-        # Calculate the implied probability
         implied_probability = denominator / (numerator + denominator)
         probabilities[outcome] = implied_probability
 
-    # Calculate the total implied probability
     total_probability = sum(probabilities.values())
-
-    # Normalize the probabilities to get the fair percentages
     percentages = {}
     for outcome, probability in probabilities.items():
         percentage = (probability / total_probability) * 100
         percentages[outcome] = round(percentage, 2)
 
     return percentages
+
 
 def parse_upcoming_matches(upcoming_match_dict):
     matches = upcoming_match_dict.split('\n\n')
@@ -198,90 +141,125 @@ def parse_upcoming_matches(upcoming_match_dict):
     return parsed_matches
 
 
+def get_team_position(standings, team_id):
+    for row in standings['standings'][0]['rows']:
+        if row['team']['id'] == team_id:
+            return row['position']
+    return 0
+
+
+def get_league_info(tournament_id, season_id):
+    url = f"https://{api_host}/api/tournament/{tournament_id}/season/{season_id}/info"
+    league_info = make_api_request(url)
+    if league_info and 'info' in league_info:
+        return league_info['info']
+    return None
+
+
 def predict_match(match_id):
     """
-    Predicts the match score based on form (40%), odds (30%), league standing (10%), and recent goals (20%).
+    Predicts the match score based on form, odds, league standing, recent goals, and league information.
     """
-    # Fetch match details
     match_details = fetch_and_store_match_details(match_id)
     if not match_details:
-        logging.error(f"Unable to fetch match details for match ID: {match_id}")
         return f"Unable to fetch match details for match ID: {match_id}. Check if the match ID is correct."
 
-    # Log the match details for debugging
-    logging.info(f"Match details: {match_details}")
-
-    # Extract prediction info
     prediction_info = get_match_prediction_info(match_details)
     if not prediction_info:
-        logging.error(f"Unable to extract prediction info for match ID: {match_id}")
         return f"Unable to extract prediction info for match ID: {match_id}. Match details might be incomplete."
 
-    # Log the prediction info for debugging
-    logging.info(f"Prediction info: {prediction_info}")
+    home_team_id, away_team_id, tournament_id, season_id = extract_team_and_tournament_info(prediction_info)
 
-    home_team_id = prediction_info['home_team_id']
-    away_team_id = prediction_info['away_team_id']
-    tournament_id = prediction_info['tournament_id']
-    season_id = prediction_info['season_id']
+    league_info = get_league_info(tournament_id, season_id)
+    if not league_info:
+        return "Unable to fetch league info."
 
-    # Get last 3 matches
-    home_last_matches = get_last_three_matches(home_team_id)
-    away_last_matches = get_last_three_matches(away_team_id)
-
-    # Calculate form and recent goals
-    home_form, home_goals = calculate_form_and_goals(home_last_matches)
-    away_form, away_goals = calculate_form_and_goals(away_last_matches)
-
-    # Get odds
-    odds = get_match_odds_1x2(match_id)
-    if not odds:
-        logging.error(f"Unable to fetch odds for match ID: {match_id}")
-        return "Unable to fetch odds."
-
-    home_odds = odds.get('Home', {'fractional_value': '1/1'})['fractional_value']
-    away_odds = odds.get('Away', {'fractional_value': '1/1'})['fractional_value']
-
-    # Convert fractional odds to decimal
-    home_odds = calculate_decimal_odds(home_odds)
-    away_odds = calculate_decimal_odds(away_odds)
-
-    # Get league standings
     standings = fetch_standings(tournament_id, season_id)
     if not standings:
-        logging.error(f"Unable to fetch standings for tournament ID: {tournament_id}, season ID: {season_id}")
         return "Unable to fetch standings."
 
-    home_position = get_team_position(standings, home_team_id)
-    away_position = get_team_position(standings, away_team_id) # This function is not defined in the provided code
+    home_team_data = get_team_data(home_team_id, match_id, standings, league_info, is_home=True)
+    away_team_data = get_team_data(away_team_id, match_id, standings, league_info, is_home=False)
 
-    # Calculate prediction factors
-    home_factor = calculate_prediction_factor(home_form, home_odds, home_position, home_goals)
-    away_factor = calculate_prediction_factor(away_form, away_odds, away_position, away_goals)
+    home_factor = calculate_prediction_factor(**{k: v for k, v in home_team_data.items() if k != 'name'})
+    away_factor = calculate_prediction_factor(**{k: v for k, v in away_team_data.items() if k != 'name'})
 
-    # Predict score
-    home_score = round(home_factor * 2)  # Multiply by 2 as a baseline
-    away_score = round(away_factor * 2)
+    home_expected_goals, away_expected_goals = calculate_expected_goals(home_factor, away_factor, league_info)
 
-    # Get team names
-    home_team_name = get_team_info(home_team_id)['name']
-    away_team_name = get_team_info(away_team_id)['name']
+    num_simulations = 100
+    home_scores, away_scores = simulate_multiple_matches(home_expected_goals, away_expected_goals, num_simulations)
 
-    prediction_message = f"Predicted Score:\n{home_team_name} {home_score} - {away_score} {away_team_name}\n\n"
-    prediction_message += f"Prediction Factors:\n"
-    prediction_message += f"{home_team_name}: {home_factor:.2f}\n"
-    prediction_message += f"{away_team_name}: {away_factor:.2f}\n"
+    prediction_message = generate_prediction_message(home_team_data['name'], away_team_data['name'],
+                                                     home_scores, away_scores, home_expected_goals, away_expected_goals)
 
     logging.info(f"Prediction: {prediction_message}")
-
     return prediction_message
 
-def calculate_decimal_odds(fractional_odds):
-    """
-    Converts fractional odds to decimal odds.
-    """
-    numerator, denominator = map(int, fractional_odds.split('/'))
-    return denominator / numerator
+
+def get_match_prediction_info(match_details):
+    event = match_details.get('event', {})
+    tournament = event.get('tournament', {})
+    return {
+        'tournament_id': tournament.get('uniqueTournament', {}).get('id'),
+        'season_id': event.get('season', {}).get('id'),
+        'home_team_id': event.get('homeTeam', {}).get('id'),
+        'away_team_id': event.get('awayTeam', {}).get('id'),
+        'home_team_name': event.get('homeTeam', {}).get('name'),
+        'away_team_name': event.get('awayTeam', {}).get('name')
+    }
+
+
+def extract_team_and_tournament_info(prediction_info):
+    return (prediction_info['home_team_id'], prediction_info['away_team_id'],
+            prediction_info['tournament_id'], prediction_info['season_id'])
+
+
+def get_team_data(team_id, match_id, standings, league_info, is_home):
+    last_matches = get_last_three_matches(team_id)
+    form, goals = calculate_form_and_goals(last_matches)
+    odds = get_match_odds_1x2(match_id).get('Home' if is_home else 'Away', {'fractional_value': '1/1'})[
+        'fractional_value']
+    odds = calculate_decimal_odds(odds)
+    position = get_team_position(standings, team_id)
+    name = next((row['team']['name'] for row in standings['standings'][0]['rows'] if row['team']['id'] == team_id),
+                None)
+    return {
+        'form': form,
+        'odds': odds,
+        'position': position,
+        'goals': goals,
+        'league_info': league_info,
+        'is_home': is_home,
+        'name': name  # Keep the name, but separate from the prediction factors
+    }
+
+
+def calculate_prediction_factor(form, odds, position, goals, league_info, is_home):
+    form_factor = min(form / 9, 1)
+    odds_factor = 1 / (odds + 1)
+    position_factor = (20 - min(position, 20)) / 20
+    goals_factor = min(goals / (league_info.get('goals', 0) / (
+            league_info.get('homeTeamWins', 0) + league_info.get('awayTeamWins', 0) + league_info.get('draws',
+                                                                                                      0)) * 3), 1)
+    home_advantage_factor = (league_info.get('homeTeamWins', 0) / (
+            league_info.get('homeTeamWins', 0) + league_info.get('awayTeamWins', 0) + league_info.get('draws',
+                                                                                                      0)) - 0.5) * (
+                                1 if is_home else -1)
+    return (form_factor * 0.35) + (odds_factor * 0.25) + (position_factor * 0.15) + (goals_factor * 0.15) + (
+            home_advantage_factor * 0.1)
+
+
+def calculate_expected_goals(home_factor, away_factor, league_info):
+    league_avg_goals = league_info.get('goals', 0) / (
+            league_info.get('homeTeamWins', 0) + league_info.get('awayTeamWins', 0) + league_info.get('draws', 0))
+    return league_avg_goals * (1 + home_factor - away_factor) * 1.1, league_avg_goals * (1 + away_factor - home_factor)
+
+
+def simulate_multiple_matches(home_expected_goals, away_expected_goals, num_simulations):
+    home_scores = np.random.poisson(home_expected_goals, num_simulations)
+    away_scores = np.random.poisson(away_expected_goals, num_simulations)
+    return home_scores, away_scores
+
 
 def calculate_form_and_goals(matches):
     form = 0
@@ -292,7 +270,7 @@ def calculate_form_and_goals(matches):
         home_score = int(scores[0])
         away_score = int(scores[1])
 
-        if lines[0].startswith("Home"):  # This condition is not necessary if the matches are always in the same order
+        if lines[0].startswith("Home"):
             form += 3 if home_score > away_score else (1 if home_score == away_score else 0)
             goals += home_score
         else:
@@ -301,52 +279,23 @@ def calculate_form_and_goals(matches):
     return form, goals
 
 
-def get_team_position(self, standings, team_id):
-    for row in standings['standings'][0]['rows']:
-        if row['team']['id'] == team_id:
-            return row['position']
-    return None
+def calculate_decimal_odds(fractional_odds):
+    try:
+        numerator, denominator = map(int, fractional_odds.split('/'))
+        return 1 + (numerator / denominator)  # Return decimal odds
+    except ValueError:
+        logging.error(f"Invalid fractional odds format: {fractional_odds}")
+        return 2.0  # Default to even odds if parsing fails
 
 
-def get_team_position(self, standings, team_id):
-    for row in standings['standings'][0]['rows']:
-        if row['team']['id'] == team_id:
-            return row['position']
-    return None
-
-def get_team_position(self, standings, team_id):
-    """
-    Get the team's position in the league standings.
-    """
-    for row in standings['standings'][0]['rows']:
-        if row['team']['id'] == team_id:
-            return row['position']
-    return 0  # Return 0 if team not found
-
-
-def get_team_position(self, standings, team_id):
-    """
-    Get the team's position in the league standings.
-    """
-    for row in standings['standings'][0]['rows']:
-        if row['team']['id'] == team_id:
-            return row['position']
-    return 0  # Return 0 if team not found
-
-def calculate_team_factor(standing, last_3_matches, odds):
-    """
-    Calculates a team's factor based on standing, recent form, and odds.
-    """
-    # Standing factor (normalized)
-    standing_factor = (20 - standing['position']) / 20  # Assumes 20 teams in league
-
-    # Recent form factor
-    form_factor = sum(3 if match['winner'] == 'home' else (1 if match['winner'] == 'draw' else 0) for match in last_3_matches) / 9
-
-    # Odds factor (inverse of odds, normalized)
-    odds_factor = 1 / odds / 3  # Divide by 3 to normalize
-
-    # Combine factors (you can adjust weights as needed)
-    team_factor = (standing_factor * 0.4) + (form_factor * 0.4) + (odds_factor * 0.2)
-
-    return team_factor
+def generate_prediction_message(home_team_name, away_team_name, home_scores, away_scores, home_expected_goals,
+                                away_expected_goals):
+    avg_home_score = np.mean(home_scores)
+    avg_away_score = np.mean(away_scores)
+    home_wins = sum(1 for h, a in zip(home_scores, away_scores) if h > a)
+    away_wins = sum(1 for h, a in zip(home_scores, away_scores) if a > h)
+    draws = sum(1 for h, a in zip(home_scores, away_scores) if h == a)
+    home_win_prob = home_wins / len(home_scores)
+    away_win_prob = away_wins / len(home_scores)
+    draw_prob = draws / len(home_scores)
+    return f"Predicted Average Score after {len(home_scores)} simulations:\n{home_team_name} {avg_home_score:.2f} - {avg_away_score:.2f} {away_team_name}\n\nWin Probabilities:\n{home_team_name}: {home_win_prob:.2%}\n{away_team_name}: {away_win_prob:.2%}\nDraw: {draw_prob:.2%}\n\nExpected Goals:\n{home_team_name}: {home_expected_goals:.2f}\n{away_team_name}: {away_expected_goals:.2f}\n"

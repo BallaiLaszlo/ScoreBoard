@@ -2,9 +2,9 @@ import logging
 import json
 from api_call import *
 from getters import get_league_info_from_db, get_standings, get_league_image_from_db, get_team_info, \
-    get_previous_matches, format_last_three_matches, get_next_three_matches
+    get_previous_matches, format_last_three_matches, get_next_three_matches, get_league_season_info
 from redis_connection import r
-from redis_utils import store_standings, store_last_three_matches, store_next_three_matches
+from redis_utils import store_standings, store_last_three_matches, store_next_three_matches, store_league_season_info
 
 logging.basicConfig(
     filename='log.txt',  # Log file name
@@ -119,6 +119,7 @@ def fetch_league_seasons(league_id):
         logging.error(f"Failed to fetch seasons data for league ID {league_id} from API.")
 
     return []
+
 
 def fetch_team_info(team_id):
     """
@@ -264,10 +265,39 @@ def fetch_and_store_match_details(match_id):
     except Exception as e:
         logging.error(f"Error in fetch_and_store_match_details: {str(e)}")
         return None
+
+
+def fetch_and_store_league_season_info(league_id, season_id):
+    """
+    Fetches league season info from API, stores it in Redis, and returns the info.
+    """
+    logging.info(f"Fetching league season info for league ID {league_id} and season ID {season_id}")
+
+    # First, try to get the info from Redis
+    info = get_league_season_info(league_id, season_id)
+
+    if info:
+        logging.info(f"League season info for league ID {league_id} and season ID {season_id} retrieved from Redis.")
+        return info
+
+    # If not in Redis, fetch from API
+    url = f"https://footapi7.p.rapidapi.com/api/tournament/{league_id}/season/{season_id}/info"
+
+    info = make_api_request(url)
+
+    if info:
+        # Store the fetched info in Redis
+        store_league_season_info(league_id, season_id, info)
+        logging.info(
+            f"League season info for league ID {league_id} and season ID {season_id} fetched from API and stored in Redis.")
+    else:
+        logging.error(f"Failed to fetch league season info for league ID {league_id} and season ID {season_id}.")
+
+    return info
 # Example usage
-#logging.info("Fetching standings, league info, and league seasons for league ID '187'.")
-#print(fetch_standings("187", "61714"))
-#print(fetch_league_info("187"))
-#print(fetch_league_seasons("187"))
-#print(fetch_team_info("2820"))
-#print(fetch_previous_matches("2820"))
+# logging.info("Fetching standings, league info, and league seasons for league ID '187'.")
+# print(fetch_standings("187", "61714"))
+# print(fetch_league_info("187"))
+# print(fetch_league_seasons("187"))
+# print(fetch_team_info("2820"))
+# print(fetch_previous_matches("2820"))

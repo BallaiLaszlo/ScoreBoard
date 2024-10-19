@@ -5,8 +5,7 @@ from getters import get_last_three_matches
 from redis_connection import r
 
 
-
-def store_league_info(league_id, league_info, last_fetched = 0):
+def store_league_info(league_id, league_info, last_fetched=0):
     """
     Saves league information to the database.
 
@@ -55,6 +54,7 @@ def store_league_seasons(league_id, seasons):
     Store the seasons data in Redis with the key of the league ID.
     """
     r.set(f"league:{league_id}:seasons", json.dumps(seasons))
+
 
 def store_team_info(team_id, team_info, last_fetched=0):
     """
@@ -116,8 +116,29 @@ def store_next_three_matches(team_id, next_three_matches):
     else:
         logging.warning(f"No matches to store for team ID {team_id}.")
 
+    def store_league_season_info(league_id, season_id, info):
+        """
+        Stores league season info in Redis.
+        """
+        if info:
+            key = f'league_season_info:{league_id}:{season_id}'
+            r.set(key, json.dumps(info))
+            logging.info(f"Stored league season info for league ID {league_id} and season ID {season_id} in Redis.")
+        else:
+            logging.warning(f"No league season info to store for league ID {league_id} and season ID {season_id}.")
 
-    #store_standings("8",61643,fetch_standings("8","61643"))
-#store_league_info("8",fetch_league_info("8"))
-#store_league_image("8",fetch_league_image("8"))
-#store_league_seasons("8",fetch_league_seasons(8))
+
+def store_league_season_info(league_id, season_id, info):
+    """
+    Stores league season info in Redis.
+    """
+    if info:
+        key = f'league_season_info:{league_id}:{season_id}'
+        r.set(key, json.dumps(info))
+        logging.info(f"Stored league season info for league ID {league_id} and season ID {season_id} in Redis.")
+    else:
+        logging.warning(f"No league season info to store for league ID {league_id} and season ID {season_id}.")
+    # store_standings("8",61643,fetch_standings("8","61643"))
+# store_league_info("8",fetch_league_info("8"))
+# store_league_image("8",fetch_league_image("8"))
+# store_league_seasons("8",fetch_league_seasons(8))

@@ -2,7 +2,6 @@ import json
 import logging
 from redis_connection import r
 
-
 logging.basicConfig(
     filename='log.txt',  # Log file name
     level=logging.INFO,  # Log level
@@ -13,6 +12,7 @@ with open('settings.json', 'r') as f:
     settings = json.load(f)
 
 leagues = settings["leagues"]
+
 
 def get_league_names(league_id):
     """
@@ -25,6 +25,7 @@ def get_league_names(league_id):
         return league_info_dict
     logging.warning(f"No league info found for league ID {league_id}.")
     return None
+
 
 def get_league_name_list():
     """
@@ -44,6 +45,7 @@ def get_league_name_list():
         else:
             logging.warning(f"League info not found for league ID {league_id}.")
     return league_name_list
+
 
 def get_seasons(league_id):
     """
@@ -65,6 +67,7 @@ def get_seasons(league_id):
     logging.warning(f"No seasons found for league ID {league_id}.")
     return None
 
+
 def get_first_season_id(league_id):
     """
     Retrieve the first season ID from Redis.
@@ -75,6 +78,7 @@ def get_first_season_id(league_id):
         return temp[0]
     logging.warning(f"No seasons available to retrieve first season ID for league ID {league_id}.")
     return None
+
 
 def get_league_image_from_db(league_id):
     """
@@ -88,6 +92,7 @@ def get_league_image_from_db(league_id):
     logging.warning(f"No image found for league ID {league_id}.")
     return None
 
+
 def get_standings(league_id, season_id):
     """
     Retrieve standings for a specific league and season from Redis.
@@ -100,6 +105,7 @@ def get_standings(league_id, season_id):
         return standings_dict
     logging.warning(f"No standings found for league ID {league_id}, season ID {season_id}.")
     return None
+
 
 def get_league_info_from_db(league_id):
     """
@@ -117,6 +123,7 @@ def get_league_info_from_db(league_id):
     else:
         logging.warning(f"No league info found for league ID {league_id}.")
     return league_info
+
 
 def get_last_fetched_time(league_id, season_id):
     """
@@ -238,6 +245,7 @@ def get_team_id_from_standings(standings, team_name):
 
     logging.warning(f"No team ID found for team name {team_name}")
     return None
+
 
 def get_team_scores(response):
     """
@@ -388,7 +396,6 @@ def get_next_three_matches(response):
         return []
 
 
-
 def get_next_match_info(upcoming_matches):
     if not upcoming_matches or not isinstance(upcoming_matches, list):
         return None
@@ -401,15 +408,27 @@ def get_next_match_info(upcoming_matches):
             return match_id, home_team, away_team
     return None
 
-#print(leagues)
-#print(get_league_names(leagues))
-#print(get_seasons("8"))
-#print(get_first_season_id("8"))
-#print(get_league_image_from_db("8"))
-#print(get_standings("8","61643"))
-#print(get_standings("8", get_first_season_id("8")))
-#print(get_league_info_from_db("8"))
-#print(get_league_names("8"))
-#print(get_league_name_list())
-#print(get_team_info("17"))
 
+def get_league_season_info(league_id, season_id):
+    """
+    Retrieves league season info from Redis.
+    """
+    key = f'league_season_info:{league_id}:{season_id}'
+    info = r.get(key)
+    if info:
+        logging.info(f"League season info for league ID {league_id} and season ID {season_id} retrieved from Redis.")
+        return json.loads(info)
+    else:
+        logging.info(f"League season info for league ID {league_id} and season ID {season_id} not found in Redis.")
+        return None
+
+# print(get_league_names(leagues))
+# print(get_seasons("8"))
+# print(get_first_season_id("8"))
+# print(get_league_image_from_db("8"))
+# print(get_standings("8","61643"))
+# print(get_standings("8", get_first_season_id("8")))
+# print(get_league_info_from_db("8"))
+# print(get_league_names("8"))
+# print(get_league_name_list())
+# print(get_team_info("17"))
